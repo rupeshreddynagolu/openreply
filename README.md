@@ -70,7 +70,7 @@ This is the part people skip. There is no shared instance to join — the button
 ### Run it locally
 
 ```bash
-git clone https://github.com/diwenne/openreply.git
+git clone https://github.com/rupeshreddynagolu/openreply.git
 cd openreply
 npm install
 cp .env.example .env      # then fill in the values, see docs/setup.md
