@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
 }
 
 model User {
@@ -176,7 +176,7 @@ model Automation {
   postUrl        String?
   pendingNextReel Boolean @default(false)
   matchAnyPost   Boolean @default(false)
-  keywords       String[]
+  keywords       Json
   matchAnyWord   Boolean @default(false)
   // Also fire this campaign when someone sends a DM whose text matches the
   // keywords above. Independent of the post trigger — a DM has no media, so
@@ -197,7 +197,7 @@ model Automation {
   followUpDelayMinutes Int @default(0)
   publicReplyEnabled Boolean @default(false)
   publicReplyMessage String?
-  publicReplyMessages String[] @default([])
+  publicReplyMessages Json @default("[]")
   isActive       Boolean @default(true)
   wholeWordMatch Boolean @default(true)
   reportShareSlug    String? @unique
