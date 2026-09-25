@@ -35,6 +35,7 @@ import {
 } from "@/lib/meta/client";
 import { decryptToken } from "@/lib/meta/oauth";
 import { matchKeywords } from "@/lib/utils/keyword-matcher";
+import { asStringArray } from "@/lib/utils/json-array";
 
 // Only consider comments from the last few days — older ones are outside
 // Instagram's private-reply window anyway, so a DM to them would just fail.
@@ -89,10 +90,14 @@ export async function reconcileComments(): Promise<void> {
   const tokenCache = new Map<string, string | null>();
 
   for (const automation of automations) {
-    const stat = await sweepCampaign(automation, sinceMs, tokenCache).catch(
+    const stat = await sweepCampaign(
+      { ...automation, keywords: asStringArray(automation.keywords) },
+      sinceMs,
+      tokenCache
+    ).catch(
       (error): SweepStat => ({
         campaign: automation.name,
-        keywords: automation.keywords.join(","),
+        keywords: asStringArray(automation.keywords).join(","),
         matched: 0,
         alreadyReplied: 0,
         enqueued: 0,

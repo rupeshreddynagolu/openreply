@@ -27,6 +27,7 @@ import {
 } from "@/lib/meta/client";
 import { decryptToken } from "@/lib/meta/oauth";
 import { matchKeywords } from "@/lib/utils/keyword-matcher";
+import { asStringArray } from "@/lib/utils/json-array";
 import { reserveDMSlot } from "@/lib/utils/rate-limiter";
 import {
   releaseWorkspaceDMReservation,
@@ -237,7 +238,7 @@ async function processComment(job: Job<ProcessCommentJob>): Promise<void> {
       ? { matched: true, matchedKeyword: null }
       : matchKeywords(
           commentText,
-          automation.keywords,
+          asStringArray(automation.keywords),
           automation.wholeWordMatch
         );
 
@@ -360,9 +361,10 @@ async function processComment(job: Job<ProcessCommentJob>): Promise<void> {
     // Public reply leg — decoupled from the DM and posted first so a DM failure
     // (e.g. a non-follower whose messaging is restricted) never suppresses it.
     // Idempotent across retries via publicReplySentAt.
+    const publicReplyMessages = asStringArray(automation.publicReplyMessages);
     const replyPool =
-      automation.publicReplyMessages.length > 0
-        ? automation.publicReplyMessages
+      publicReplyMessages.length > 0
+        ? publicReplyMessages
         : automation.publicReplyMessage
           ? [automation.publicReplyMessage]
           : [];
@@ -970,7 +972,7 @@ async function processMessage(job: Job<ProcessMessageJob>): Promise<void> {
       ? { matched: true, matchedKeyword: null }
       : matchKeywords(
           messageText,
-          automation.keywords,
+          asStringArray(automation.keywords),
           automation.wholeWordMatch
         );
 
