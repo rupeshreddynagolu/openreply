@@ -3,20 +3,29 @@
 /**
  * Sidebar Navigation
  *
- * Text-only nav with active state and workspace section.
+ * Icon + label nav with active state and workspace section.
  */
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import {
+  LayoutDashboard,
+  BarChart3,
+  Inbox as InboxIcon,
+  Megaphone,
+  ScrollText,
+  Settings as SettingsIcon,
+  Activity,
+} from "lucide-react";
 
 const navItems = [
-  { label: "Dashboard", href: "/dashboard" },
-  { label: "Overview", href: "/overview" },
-  { label: "Inbox", href: "/inbox" },
-  { label: "Campaigns", href: "/campaigns" },
-  { label: "DM Logs", href: "/logs" },
-  { label: "Settings", href: "/settings" },
-  { label: "Diagnostics", href: "/diagnostics" },
+  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Overview", href: "/overview", icon: BarChart3 },
+  { label: "Inbox", href: "/inbox", icon: InboxIcon },
+  { label: "Campaigns", href: "/campaigns", icon: Megaphone },
+  { label: "DM Logs", href: "/logs", icon: ScrollText },
+  { label: "Settings", href: "/settings", icon: SettingsIcon },
+  { label: "Diagnostics", href: "/diagnostics", icon: Activity },
 ];
 
 interface SidebarProps {
@@ -56,8 +65,8 @@ export default function Sidebar({
           className="px-6 py-5 border-b border-border"
           style={{ paddingTop: "calc(1.25rem + env(safe-area-inset-top))" }}
         >
-          <Link href="/dashboard" className="text-base font-semibold">
-            OpenReply
+          <Link href="/dashboard" aria-label="Flowly">
+            <img src="/logo.png" alt="Flowly" className="h-8 w-auto" />
           </Link>
         </div>
 
@@ -65,6 +74,7 @@ export default function Sidebar({
           {navItems.map((item) => {
             const isActive =
               pathname === item.href || pathname.startsWith(item.href + "/");
+            const Icon = item.icon;
             return (
               <Link
                 key={item.href}
@@ -72,7 +82,7 @@ export default function Sidebar({
                 onClick={onClose}
                 aria-current={isActive ? "page" : undefined}
                 className={`
-                  block px-3 py-2.5 rounded text-sm
+                  flex items-center gap-3 px-3 py-2.5 rounded text-sm
                   ${
                     isActive
                       ? "bg-surface-hover text-foreground font-medium"
@@ -80,6 +90,7 @@ export default function Sidebar({
                   }
                 `}
               >
+                <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
                 {item.label}
               </Link>
             );

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { DemoNotice } from "@/components/demo-notice";
 
 export const metadata: Metadata = {
-  title: "OpenReply - Open source Instagram comment-to-DM automation",
+  title: "Flowly - Open source Instagram comment-to-DM automation",
   description:
     "A free, self-hosted ManyChat alternative. Turn Instagram keyword comments into automatic private replies using the official Meta API.",
 };
@@ -292,8 +292,8 @@ export default async function Home() {
 
       <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white">
         <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-5 sm:px-6 lg:px-8">
-          <Link href="/" className="flex items-center gap-3" aria-label="OpenReply home">
-            <span className="text-lg font-bold text-zinc-900">OpenReply</span>
+          <Link href="/" className="flex items-center gap-3" aria-label="Flowly home">
+            <img src="/logo.png" alt="Flowly" className="h-8 w-auto" />
           </Link>
 
           <div className="flex items-center gap-4">
@@ -302,7 +302,7 @@ export default async function Home() {
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-2 text-sm font-semibold text-zinc-600 transition hover:text-zinc-900"
-              aria-label="View OpenReply on GitHub"
+              aria-label="View Flowly on GitHub"
             >
               <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4 fill-current">
                 <path d={githubIconPath} />
@@ -311,7 +311,7 @@ export default async function Home() {
             </a>
             <Link
               href="/login"
-              className="inline-flex items-center justify-center gap-2 bg-orange-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-orange-600"
+              className="inline-flex items-center justify-center gap-2 bg-indigo-500 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-600 hover:shadow-md rounded-lg"
             >
               Get started
             </Link>
@@ -338,7 +338,7 @@ export default async function Home() {
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link
               href="/login"
-              className="inline-flex items-center justify-center gap-2 bg-orange-500 px-6 py-3 text-sm font-bold text-white transition hover:bg-orange-600"
+              className="inline-flex items-center justify-center gap-2 bg-indigo-500 px-6 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-600 hover:shadow-md rounded-lg"
             >
               Get started
             </Link>
@@ -371,7 +371,7 @@ export default async function Home() {
       <section id="how" className="mx-auto w-full max-w-6xl px-5 py-20 sm:px-6 lg:px-8">
         <div className="grid gap-10 lg:grid-cols-[0.82fr_1.18fr] lg:items-center">
           <div>
-            <p className="text-sm font-bold uppercase text-orange-600">How it works</p>
+            <p className="text-sm font-bold uppercase text-indigo-600">How it works</p>
             <h2 className="mt-3 text-4xl font-black leading-tight text-zinc-900 sm:text-5xl">
               A comment in, a DM out
             </h2>
@@ -388,7 +388,7 @@ export default async function Home() {
                 key={step.title}
                 className="grid gap-4 border border-zinc-200 bg-zinc-50 p-5 sm:grid-cols-[120px_1fr]"
               >
-                <p className="text-sm font-bold text-orange-600">{step.eyebrow}</p>
+                <p className="text-sm font-bold text-indigo-600">{step.eyebrow}</p>
                 <div>
                   <h3 className="text-xl font-bold text-zinc-900">{step.title}</h3>
                   <p className="mt-2 text-sm leading-6 text-zinc-600">{step.description}</p>
@@ -404,7 +404,7 @@ export default async function Home() {
           <DashboardPreview />
 
           <div>
-            <p className="text-sm font-bold uppercase text-orange-600">The dashboard</p>
+            <p className="text-sm font-bold uppercase text-indigo-600">The dashboard</p>
             <h2 className="mt-3 text-4xl font-black leading-tight text-zinc-900 sm:text-5xl">
               See exactly what happened
             </h2>
@@ -418,7 +418,7 @@ export default async function Home() {
 
       <section id="features" className="mx-auto w-full max-w-6xl px-5 py-20 sm:px-6 lg:px-8">
         <div className="max-w-2xl">
-          <p className="text-sm font-bold uppercase text-orange-600">What&rsquo;s included</p>
+          <p className="text-sm font-bold uppercase text-indigo-600">What&rsquo;s included</p>
           <h2 className="mt-3 text-4xl font-black leading-tight text-zinc-900 sm:text-5xl">
             Everything, no tiers
           </h2>
@@ -441,7 +441,7 @@ export default async function Home() {
       </section>
 
       <section className="mx-auto w-full max-w-6xl px-5 pb-20 sm:px-6 lg:px-8">
-        <div className="grid gap-8 border border-orange-200 bg-orange-50 p-6 sm:p-10 lg:grid-cols-[1fr_auto] lg:items-center">
+        <div className="grid gap-8 rounded-2xl border border-indigo-200 bg-indigo-50 p-6 sm:p-10 lg:grid-cols-[1fr_auto] lg:items-center">
           <div>
             <h2 className="max-w-3xl text-4xl font-black leading-tight text-zinc-900 sm:text-5xl">
               Turn your next reel&rsquo;s comments into DMs
@@ -458,7 +458,7 @@ export default async function Home() {
                 href={SETUP_DOCS_URL}
                 target="_blank"
                 rel="noreferrer"
-                className="font-bold text-orange-700 underline underline-offset-2 transition hover:text-orange-800"
+                className="font-bold text-indigo-700 underline underline-offset-2 transition hover:text-indigo-800"
               >
                 setup guide
               </a>{" "}
@@ -469,7 +469,7 @@ export default async function Home() {
           <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
             <Link
               href="/login"
-              className="inline-flex items-center justify-center gap-2 bg-orange-500 px-6 py-3 text-sm font-bold text-white transition hover:bg-orange-600"
+              className="inline-flex items-center justify-center gap-2 bg-indigo-500 px-6 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-600 hover:shadow-md rounded-lg"
             >
               Get started
             </Link>
@@ -485,7 +485,7 @@ export default async function Home() {
 
       <footer className="border-t border-zinc-200 py-8">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-5 text-sm text-zinc-500 sm:px-6 lg:px-8">
-          <span className="font-semibold text-zinc-600">OpenReply</span>
+          <img src="/logo.png" alt="Flowly" className="h-5 w-auto" />
           <a
             href={GITHUB_URL}
             target="_blank"

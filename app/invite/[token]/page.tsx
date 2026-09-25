@@ -10,7 +10,7 @@ type InvitePageProps = {
 };
 
 export const metadata: Metadata = {
-  title: "Accept Workspace Invitation - OpenReply",
+  title: "Accept Workspace Invitation - Flowly",
   robots: { index: false, follow: false },
 };
 
@@ -35,8 +35,8 @@ export default async function InvitePage({ params }: InvitePageProps) {
   return (
     <main className="min-h-screen bg-background text-foreground">
       <div className="mx-auto flex min-h-screen w-full max-w-xl flex-col justify-center px-5 py-12">
-        <Link href="/" className="mb-8 text-sm font-bold text-cyan-100">
-          OpenReply
+        <Link href="/" className="mb-8" aria-label="Flowly">
+          <img src="/logo.png" alt="Flowly" className="h-8 w-auto" />
         </Link>
         <section className="border border-white/10 bg-white/[0.035] p-8">
           <p className="text-xs font-semibold uppercase tracking-wide text-cyan-100">

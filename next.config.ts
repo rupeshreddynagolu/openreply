@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(),
   },
+  allowedDevOrigins: ["flowly.oakstay.co.in"],
 };
 
 export default nextConfig;

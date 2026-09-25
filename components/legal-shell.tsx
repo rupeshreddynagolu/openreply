@@ -17,8 +17,8 @@ export default function LegalShell({
     <main className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-5">
-          <Link href="/" className="flex items-center gap-3">
-            <span className="text-lg font-bold text-foreground">OpenReply</span>
+          <Link href="/" aria-label="Flowly">
+            <img src="/logo.png" alt="Flowly" className="h-8 w-auto" />
           </Link>
           <Link
             href="/login"
