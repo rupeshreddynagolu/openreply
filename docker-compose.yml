@@ -2,18 +2,19 @@
 # Run: docker-compose up -d
 
 services:
-  postgres:
-    image: postgres:16
+  mysql:
+    image: mysql:8
     environment:
-      POSTGRES_DB: openreply
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      MYSQL_DATABASE: openreply
+      MYSQL_ROOT_PASSWORD: mysql
     ports:
-      - "5432:5432"
+      # Host port 3307, not 3306 — 3306 is already taken by an unrelated
+      # container on this machine (pg_tenant_db, a different project).
+      - "3307:3306"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - mysqldata:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pmysql"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -31,5 +32,5 @@ services:
       retries: 5
 
 volumes:
-  pgdata:
+  mysqldata:
   redisdata:
