@@ -31,12 +31,12 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String?
-  access_token      String?
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String?
+  id_token          String? @db.Text
   session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -130,7 +130,7 @@ model InstagramAccount {
   instagramId       String   @unique
   username          String
   name              String?
-  accessToken       String
+  accessToken       String   @db.Text
   tokenExpiresAt    DateTime?
   webhookSubscribed Boolean  @default(false)
   connectedAt       DateTime @default(now())
@@ -173,7 +173,7 @@ model Automation {
   name           String
   goal           String?
   postId         String?
-  postUrl        String?
+  postUrl        String? @db.Text
   pendingNextReel Boolean @default(false)
   matchAnyPost   Boolean @default(false)
   keywords       Json
@@ -182,21 +182,21 @@ model Automation {
   // keywords above. Independent of the post trigger — a DM has no media, so
   // postId / matchAnyPost do not apply to it.
   dmTriggerEnabled Boolean @default(false)
-  dmMessage      String
+  dmMessage      String @db.Text
   openingDmEnabled     Boolean @default(false)
-  openingDmMessage     String?
+  openingDmMessage     String? @db.Text
   openingDmButtonLabel String?
   linkButtonLabel      String?
   requireFollow           Boolean @default(false)
-  followPromptMessage     String?
+  followPromptMessage     String? @db.Text
   followPromptButtonLabel String?
   followUpEnabled Boolean @default(false)
-  followUpMessage String?
+  followUpMessage String? @db.Text
   // Minutes to wait after the link is delivered before sending the follow-up.
   // 0 sends it right away.
   followUpDelayMinutes Int @default(0)
   publicReplyEnabled Boolean @default(false)
-  publicReplyMessage String?
+  publicReplyMessage String? @db.Text
   publicReplyMessages Json @default("[]")
   isActive       Boolean @default(true)
   wholeWordMatch Boolean @default(true)
@@ -225,19 +225,19 @@ model DmLog {
 
   commenterId   String
   commenterName String?
-  commentText   String
+  commentText   String @db.Text
   commentId     String
   matchedKeyword String?
   status        DmStatus @default(PENDING)
   attempts      Int      @default(0)
   dmSentAt      DateTime?
-  errorMessage  String?
+  errorMessage  String? @db.Text
 
   // The public comment reply is delivered independently of the DM, so its
   // outcome is tracked separately. publicReplySentAt makes it idempotent across
   // retries; a DM failure never blocks or re-posts the public reply.
   publicReplySentAt DateTime?
-  publicReplyError  String?
+  publicReplyError  String? @db.Text
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -275,7 +275,7 @@ model TrackedLink {
   automationId   String
   slug           String   @unique
   label          String?
-  destinationUrl String
+  destinationUrl String @db.Text
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -294,7 +294,7 @@ model LinkClick {
   instagramAccountId String
   trackedLinkId      String
   ipHash             String?
-  userAgent          String?
+  userAgent          String? @db.Text
   referrer           String?
   createdAt          DateTime @default(now())
 
@@ -317,7 +317,7 @@ model WebhookEvent {
   object      String?
   payload     Json
   status      WebhookStatus @default(PENDING)
-  errorMessage String?
+  errorMessage String? @db.Text
   createdAt   DateTime      @default(now())
   processedAt DateTime?
 
@@ -332,7 +332,7 @@ model OperationalEvent {
   workspaceId String?
   source      OperationalEventSource
   level       OperationalEventLevel @default(INFO)
-  message     String
+  message     String @db.Text
   payload     Json?
   createdAt   DateTime              @default(now())
   resolvedAt  DateTime?
