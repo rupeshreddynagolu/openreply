@@ -1,16 +1,16 @@
 # Self-Hosting on Dokploy
 
-This guide covers deploying OpenReply on your own server using [Dokploy](https://dokploy.com), as an alternative to the Vercel + Railway setup covered in `docs/setup.md`. Running everything on your own Dokploy instance means no per-seat hosting fees and no usage caps — but there are a few gotchas specific to this setup worth knowing up front.
+This guide covers deploying Flowly on your own server using [Dokploy](https://dokploy.com), as an alternative to the Vercel + Railway setup covered in `docs/setup.md`. Running everything on your own Dokploy instance means no per-seat hosting fees and no usage caps — but there are a few gotchas specific to this setup worth knowing up front.
 
 ## Overview
 
-OpenReply needs four services running:
+Flowly needs four services running:
 - **Web app** — the Next.js dashboard, OAuth callback, and webhook receiver
 - **Worker** — a long-running Node process that sends the DMs (cannot run as a serverless function)
-- **Postgres**
+- **MySQL**
 - **Redis**
 
-On Dokploy, these become: one Postgres database service, one Redis database service, and **two separate Applications** pointing at the same repo (one for the web app, one for the worker), each with different start commands.
+On Dokploy, these become: one MySQL database service, one Redis database service, and **two separate Applications** pointing at the same repo (one for the web app, one for the worker), each with different start commands.
 
 Since everything runs on the same Dokploy server, you don't need the "public vs internal database URL" split that the Vercel/Railway guide requires — both apps can just use Dokploy's internal service hostnames directly.
 
@@ -105,7 +105,7 @@ when most of the comments arrive.
 ## Step-by-step
 
 1. Fork this repo.
-2. In Dokploy: **Create → Database → PostgreSQL** and **Create → Database → Redis**. Note their internal service hostnames.
+2. In Dokploy: **Create → Database → MySQL** and **Create → Database → Redis**. Note their internal service hostnames.
 3. In Dokploy: **Create → Application**, connect your fork, `main` branch. This is the web app.
 4. Add the `nixpacks.toml` file (Gotcha #1) to your fork's root, and set the environment variables from Gotchas #1 and #2 (web app version) plus the standard variables from `.env.example` — pointing `DATABASE_URL` and `REDIS_URL` at the internal hostnames from step 2.
 5. Assign a domain to the web app only (not the worker) in Dokploy's Domains section, container port `3000`. This becomes your `NEXTAUTH_URL`.
