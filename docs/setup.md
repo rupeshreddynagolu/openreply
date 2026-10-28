@@ -32,6 +32,8 @@ Recommended split:
 
 Do Railway first, because Vercel needs the database URLs from it.
 
+On cPanel instead? Follow [deploy-cpanel.md](deploy-cpanel.md); the environment variables and Meta steps below still apply.
+
 ### Step 1: Railway (MySQL, worker)
 
 1. Create a Railway account and a New Project.

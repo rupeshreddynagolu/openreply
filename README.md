@@ -81,7 +81,7 @@ npm run dev               # web app on http://localhost:3000, sends DMs too
 
 One process. `npm run dev` serves the app, receives webhooks, and runs the job runtime that sends the messages. If comments come in and no DM ever arrives, check `/api/health` and the log for `[DM Worker] Started`.
 
-Full environment variables and the production layout are in [docs/setup.md](docs/setup.md).
+Full environment variables and the production layout are in [docs/setup.md](docs/setup.md). For cPanel hosting (Setup Node.js App), follow [docs/deploy-cpanel.md](docs/deploy-cpanel.md): one `npm run package:cpanel`, upload the zip, done.
 
 ## Set it up with your AI assistant
 
