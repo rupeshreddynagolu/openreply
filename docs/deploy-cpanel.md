@@ -42,29 +42,39 @@ DATABASE_URL=mysql://cpuser_flowly:PASSWORD@localhost:3306/cpuser_flowly
 URL-encode special characters in the password (`@` becomes `%40`, `#` becomes
 `%23`, `/` becomes `%2F`).
 
-## 2. Run the migrations from your machine
+## 2. Run the migrations
 
-The package does not include the Prisma CLI, so the schema is applied from your
-clone of the repo. Pick one way to reach the database:
+The schema is applied with Prisma's CLI, which the app itself does not carry.
+`npm run package:cpanel` (step 3) also builds `dist/flowly-migrate.zip`, a
+small kit for running the migrations in **cPanel → Terminal**:
 
-**Remote MySQL.** In cPanel, open **Remote MySQL** and add your public IP. Then,
-using your domain (or the server hostname cPanel shows) as the host:
+1. Upload `flowly-migrate.zip` to the application root and **Extract** it. It
+   creates a `migrate` folder next to `app.js`.
+2. In **Setup Node.js App**, copy the command shown at the top of your app's
+   page (`source /home/cpuser/nodevenv/flowly/22/bin/activate && cd
+   /home/cpuser/flowly`) and run it in **Terminal**, so `node` and `npm` are
+   the app's versions.
+3. Then:
 
-```bash
-DATABASE_URL="mysql://cpuser_flowly:PASSWORD@yourdomain.com:3306/cpuser_flowly" npm run db:migrate
-```
+   ```bash
+   cd migrate
+   npm install
+   npm run migrate
+   ```
 
-**SSH tunnel.** If you have SSH but no Remote MySQL:
+   It reads `DATABASE_URL` from the app's `.env` one folder up, or from the
+   environment: prefix the last line with `DATABASE_URL="mysql://…"` if your
+   settings live only in cPanel's Environment variables. It ends with "All
+   migrations have been successfully applied".
 
-```bash
-ssh -N -L 3307:localhost:3306 cpuser@yourdomain.com
-# in a second terminal:
-DATABASE_URL="mysql://cpuser_flowly:PASSWORD@127.0.0.1:3307/cpuser_flowly" npm run db:migrate
-```
+Run it again (with the new kit) whenever a release adds files under
+`prisma/migrations/`; it only applies what is missing. The job queue's own
+tables (`sidequest_*`) are not part of this step; the app creates them itself
+when it starts.
 
-Run this again before uploading any release that adds files under
-`prisma/migrations/`. The job queue's own tables (`sidequest_*`) are not part
-of this step; the app creates them itself when it starts.
+From your own machine works too, if the host allows it: add your IP under
+**Remote MySQL** in cPanel, then in the repo run
+`DATABASE_URL="mysql://cpuser_flowly:PASSWORD@yourdomain.com:3306/cpuser_flowly" npm run db:migrate`.
 
 ## 3. Build the package
 
