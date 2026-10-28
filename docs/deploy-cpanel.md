@@ -42,39 +42,17 @@ DATABASE_URL=mysql://cpuser_flowly:PASSWORD@localhost:3306/cpuser_flowly
 URL-encode special characters in the password (`@` becomes `%40`, `#` becomes
 `%23`, `/` becomes `%2F`).
 
-## 2. Run the migrations
+## 2. Migrations run themselves
 
-The schema is applied with Prisma's CLI, which the app itself does not carry.
-`npm run package:cpanel` (step 3) also builds `dist/flowly-migrate.zip`, a
-small kit for running the migrations in **cPanel → Terminal**:
+There is nothing to run. The package starts with `MIGRATE_ON_START=true`, so
+every time the app starts it applies any pending migrations from
+`app/prisma/migrations` before serving (`lib/db/migrate-on-start.ts`). It
+records them in Prisma's own `_prisma_migrations` table under Prisma's lock, so
+`prisma migrate deploy` from your machine stays compatible if you ever use it.
+The log shows `[Migrate] Applied N migration(s)` or `[Migrate] Database is up
+to date`.
 
-1. Upload `flowly-migrate.zip` to the application root and **Extract** it. It
-   creates a `migrate` folder next to `app.js`.
-2. In **Setup Node.js App**, copy the command shown at the top of your app's
-   page (`source /home/cpuser/nodevenv/flowly/22/bin/activate && cd
-   /home/cpuser/flowly`) and run it in **Terminal**, so `node` and `npm` are
-   the app's versions.
-3. Then:
-
-   ```bash
-   cd migrate
-   npm install
-   npm run migrate
-   ```
-
-   It reads `DATABASE_URL` from the app's `.env` one folder up, or from the
-   environment: prefix the last line with `DATABASE_URL="mysql://…"` if your
-   settings live only in cPanel's Environment variables. It ends with "All
-   migrations have been successfully applied".
-
-Run it again (with the new kit) whenever a release adds files under
-`prisma/migrations/`; it only applies what is missing. The job queue's own
-tables (`sidequest_*`) are not part of this step; the app creates them itself
-when it starts.
-
-From your own machine works too, if the host allows it: add your IP under
-**Remote MySQL** in cPanel, then in the repo run
-`DATABASE_URL="mysql://cpuser_flowly:PASSWORD@yourdomain.com:3306/cpuser_flowly" npm run db:migrate`.
+The job queue's own tables (`sidequest_*`) are created by the app as well.
 
 ## 3. Build the package
 
@@ -166,7 +144,7 @@ callback URL both use `https://yourdomain.com`.
 
 ## Updating
 
-1. `git pull`, then run the migrations (step 2) if the release added any.
+1. `git pull`. New migrations are applied by the app when it restarts.
 2. `npm run package:cpanel`.
 3. In File Manager, delete the application root's `app` folder (old build
    files otherwise linger next to the new ones), then upload and extract the
@@ -174,6 +152,10 @@ callback URL both use `https://yourdomain.com`.
 4. **Restart** the app in **Setup Node.js App**.
 
 ## Troubleshooting
+
+**`/api/health` says a table "does not exist".** The startup migrations did not
+run or failed. The log shows `[Migrate] Failed` with the reason — usually a
+database user without `CREATE`/`ALTER` rights (step 1). Fix it and restart.
 
 **"An error occured during installation of modules. Web application is
 inaccessible".** The application root holds a real `node_modules` folder,
