@@ -13,7 +13,6 @@ import {
   existsSync,
   mkdirSync,
   readdirSync,
-  readFileSync,
   realpathSync,
   rmSync,
   unlinkSync,
@@ -30,7 +29,6 @@ const outDir = path.join(distDir, "cpanel");
 // environment, and its module install fails when a real folder is there.
 const appDir = path.join(outDir, "app");
 const zipPath = path.join(distDir, "flowly-cpanel.zip");
-const migrateZipPath = path.join(distDir, "flowly-migrate.zip");
 
 function run(command, args, options = {}) {
   execFileSync(command, args, { cwd: root, stdio: "inherit", ...options });
@@ -44,7 +42,6 @@ run("npm", ["run", "build"], {
 console.log("[package] Assembling dist/cpanel…");
 rmSync(outDir, { recursive: true, force: true });
 rmSync(zipPath, { force: true });
-rmSync(migrateZipPath, { force: true });
 mkdirSync(outDir, { recursive: true });
 
 cpSync(standalone, appDir, { recursive: true, verbatimSymlinks: true });
@@ -101,41 +98,12 @@ writeFileSync(
   ) + "\n"
 );
 
-// Migration kit, run from cPanel Terminal: `cd migrate && npm install &&
-// npm run migrate`. The app itself carries no Prisma CLI, and shared hosts
-// often block remote MySQL access, so the schema is applied on the server.
-const migrateDir = path.join(outDir, "migrate");
-mkdirSync(migrateDir);
+// Applied by the app itself at startup (lib/db/migrate-on-start.ts, switched
+// on by app.js), from app/ as its working directory.
 cpSync(
   path.join(root, "prisma", "migrations"),
-  path.join(migrateDir, "migrations"),
+  path.join(appDir, "prisma", "migrations"),
   { recursive: true }
-);
-cpSync(
-  path.join(root, "prisma", "schema.prisma"),
-  path.join(migrateDir, "schema.prisma")
-);
-cpSync(
-  path.join(root, "cpanel", "migrate", "prisma.config.ts"),
-  path.join(migrateDir, "prisma.config.ts")
-);
-const prismaVersion = JSON.parse(
-  readFileSync(path.join(root, "node_modules", "prisma", "package.json"), "utf8")
-).version;
-writeFileSync(
-  path.join(migrateDir, "package.json"),
-  JSON.stringify(
-    {
-      name: "flowly-migrate",
-      private: true,
-      description: "Applies Flowly's database migrations. See docs/deploy-cpanel.md.",
-      scripts: { migrate: "prisma migrate deploy" },
-      // Pinned to the Prisma the app was built with.
-      dependencies: { prisma: prismaVersion },
-    },
-    null,
-    2
-  ) + "\n"
 );
 
 // The job runtime cannot start without these, and nothing fails at build time
@@ -148,7 +116,7 @@ const required = [
   "app/node_modules/@sidequest/mysql-backend/migrations",
   "app/node_modules/mysql2",
   "app/node_modules/knex",
-  "migrate/migrations/migration_lock.toml",
+  "app/prisma/migrations/migration_lock.toml",
 ];
 const missing = required.filter((p) => !existsSync(path.join(outDir, p)));
 if (missing.length > 0) {
@@ -158,12 +126,9 @@ if (missing.length > 0) {
 
 console.log("[package] Zipping…");
 run("zip", ["-qr", zipPath, "."], { cwd: outDir });
-// The kit alone, for applying migrations without re-uploading the app.
-run("zip", ["-qr", migrateZipPath, "migrate"], { cwd: outDir });
 
 console.log(`
 [package] Done: ${path.relative(root, zipPath)}
-[package]       ${path.relative(root, migrateZipPath)} (migrations only)
 
 Next: upload it to the Node.js app's root on cPanel, extract it there, set the
 startup file to app.js, then restart the app. Full steps: docs/deploy-cpanel.md

@@ -35,4 +35,8 @@ if (fs.existsSync(envFile)) {
   process.loadEnvFile(envFile);
 }
 
+// Apply pending database migrations at startup (app/prisma/migrations). A
+// shared host has no way to run `prisma migrate deploy` for us.
+process.env.MIGRATE_ON_START ??= "true";
+
 require("./app/server.js");

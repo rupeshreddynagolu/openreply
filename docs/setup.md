@@ -91,6 +91,7 @@ Copy `.env.example` to `.env` for local work, or set these in Vercel and Railway
 | `ENCRYPTION_KEY` | 32-byte hex. `openssl rand -hex 32`. Encrypts Instagram tokens. Identical across web and worker. |
 | `DATABASE_URL` | MySQL connection string. Public Railway URL on Vercel; internal on the worker. |
 | `RUN_JOBS` | Optional, default on. Set to `false` on a web app whose jobs run in a separate `npm run worker` process (Vercel, or any split deployment), so the queue, heartbeat and reconciler run once. |
+| `MIGRATE_ON_START` | Optional, default off. `true` applies pending database migrations when the server starts, for hosts where `prisma migrate deploy` cannot run. The cPanel package turns it on. |
 | `RESEND_API_KEY` | Resend key. Login is email magic links only, so without this nobody can sign in. |
 | `EMAIL_FROM` | A sender on a domain you verified in Resend. The placeholder will not deliver. |
 | `EMAIL_SERVER` | Optional. An SMTP URL, for example `smtps://login%40example.com:password@mail.example.com:465`. Set it to send magic links through your own mail server instead of Resend; then `RESEND_API_KEY` is not needed. URL-encode special characters in the user and password (`@` becomes `%40`). Port 465 with `smtps://` is implicit TLS, port 587 with `smtp://` is STARTTLS. |
