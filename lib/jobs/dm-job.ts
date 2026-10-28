@@ -55,6 +55,11 @@ export class DmJob extends Job {
   }
 }
 
+// Sidequest stores the class's runtime name with each job and looks it up by
+// that name when running it. Production builds minify class names (DmJob
+// becomes something like "i"), so pin it.
+Object.defineProperty(DmJob, "name", { value: "DmJob" });
+
 // Sidequest's runner resolves job classes by importing sidequest.jobs.mjs from
 // disk, which cannot reach code inside the Next bundle. Publishing the class
 // here lets that file hand back this exact class (inline runner, same process).
