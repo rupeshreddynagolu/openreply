@@ -1,7 +1,5 @@
-import { Worker, type Job } from "bullmq";
 import {
   getDMQueue,
-  getRedisConnection,
   MESSAGE_JOB_NAME,
   POSTBACK_JOB_NAME,
   FOLLOWUP_JOB_NAME,
@@ -40,7 +38,15 @@ import {
   renderMessageWithoutLink,
 } from "@/lib/tracking/message";
 
-const BACKOFF_DELAYS = [5 * 60 * 1000, 15 * 60 * 1000, 45 * 60 * 1000];
+// A queued job as the processors see it. Mirrors the BullMQ job these were
+// written against; DmJob (lib/jobs/dm-job.ts) builds it from the Sidequest job.
+export interface Job<T = DmQueueJob> {
+  id: string;
+  name: string;
+  data: T;
+  // Earlier failed attempts of this job, so 0 on the first run.
+  attemptsMade: number;
+}
 
 function formatError(error: unknown): string {
   if (error instanceof MetaApiError) {
@@ -1188,7 +1194,7 @@ async function processMessage(job: Job<ProcessMessageJob>): Promise<void> {
   }
 }
 
-async function processJob(job: Job<DmQueueJob>): Promise<void> {
+export async function processJob(job: Job<DmQueueJob>): Promise<void> {
   if (job.name === POSTBACK_JOB_NAME) {
     return processPostback(job as Job<ProcessPostbackJob>);
   }
@@ -1201,7 +1207,7 @@ async function processJob(job: Job<DmQueueJob>): Promise<void> {
   return processComment(job as Job<ProcessCommentJob>);
 }
 
-async function recordWorkerFailure(
+export async function recordWorkerFailure(
   job: Job<DmQueueJob> | undefined,
   error: Error
 ) {
@@ -1245,52 +1251,3 @@ async function recordWorkerFailure(
     );
   }
 }
-
-export function createDMWorker(): Worker<DmQueueJob> {
-  const worker = new Worker<DmQueueJob>(
-    "dm-processing",
-    processJob,
-    {
-      connection: getRedisConnection(),
-      concurrency: 5,
-      settings: {
-        backoffStrategy: (attemptsMade: number) =>
-          BACKOFF_DELAYS[Math.min(attemptsMade - 1, BACKOFF_DELAYS.length - 1)],
-      },
-    }
-  );
-
-  worker.on("completed", (job) => {
-    console.log(`[DM Worker] Job ${job.id} completed`);
-  });
-
-  worker.on("failed", (job, err) => {
-    console.error(
-      `[DM Worker] Job ${job?.id} failed (attempt ${job?.attemptsMade}):`,
-      err.message
-    );
-    void recordWorkerFailure(job, err);
-  });
-
-  worker.on("error", (err) => {
-    console.error("[DM Worker] Worker error:", err.message);
-    void prisma.operationalEvent
-      .create({
-        data: {
-          source: "WORKER",
-          level: "ERROR",
-          message: `DM worker process error: ${err.message}`,
-          payload: { name: err.name },
-        },
-      })
-      .catch((recordError) => {
-        console.error(
-          "[DM Worker] Failed to record worker process error:",
-          formatError(recordError)
-        );
-      });
-  });
-
-  return worker;
-}
-

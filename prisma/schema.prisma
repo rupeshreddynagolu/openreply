@@ -345,6 +345,32 @@ model OperationalEvent {
   @@index([createdAt])
 }
 
+// Fixed-window counter behind the hourly private-reply cap
+// (lib/utils/rate-limiter.ts). One row per key; a row past expiresAt is reset
+// on the next reservation rather than deleted.
+model RateLimitCounter {
+  key       String   @id
+  count     Int
+  expiresAt DateTime @db.DateTime(3)
+}
+
+// Liveness of the job runtime, written every 30s (lib/ops/worker-health.ts).
+// One row per worker kind; "dm" is the only one today.
+model WorkerHeartbeat {
+  id        String   @id
+  payload   Json
+  checkedAt DateTime @db.DateTime(3)
+}
+
+// Recent job failures shown in diagnostics. Trimmed to the newest 25 on write.
+model WorkerAlert {
+  id        String   @id @default(cuid())
+  payload   Json
+  createdAt DateTime @default(now()) @db.DateTime(3)
+
+  @@index([createdAt])
+}
+
 enum WorkspaceRole {
   OWNER
   ADMIN

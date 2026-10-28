@@ -4,15 +4,15 @@ This guide covers deploying Flowly on your own server using [Dokploy](https://do
 
 ## Overview
 
-Flowly needs four services running:
-- **Web app** — the Next.js dashboard, OAuth callback, and webhook receiver
-- **Worker** — a long-running Node process that sends the DMs (cannot run as a serverless function)
-- **MySQL**
-- **Redis**
+Flowly needs two services running:
+- **Web app** — the Next.js dashboard, OAuth callback, and webhook receiver. It also runs the job runtime that sends the DMs (started by `instrumentation.ts`), since a Dokploy container stays up.
+- **MySQL** — app data plus the job queue and rate limiter. No Redis.
 
-On Dokploy, these become: one MySQL database service, one Redis database service, and **two separate Applications** pointing at the same repo (one for the web app, one for the worker), each with different start commands.
+On Dokploy, these become one MySQL database service and **one Application** pointing at the repo.
 
-Since everything runs on the same Dokploy server, you don't need the "public vs internal database URL" split that the Vercel/Railway guide requires — both apps can just use Dokploy's internal service hostnames directly.
+Since everything runs on the same Dokploy server, you don't need the "public vs internal database URL" split that the Vercel/Railway guide requires — the app can just use Dokploy's internal service hostname directly.
+
+If you would rather run the jobs in their own container, add a second Application from the same repo with `NIXPACKS_BUILD_CMD=npm run db:generate` and `NIXPACKS_START_CMD=npm run worker`, give it the same environment variables, and set `RUN_JOBS=false` on the web app so the jobs run once.
 
 ## Gotcha #1 — Node version
 
@@ -35,23 +35,18 @@ This snapshot provides Node 22.13.1, which satisfies Prisma's requirement. Then 
 NIXPACKS_NODE_VERSION=22
 ```
 
-as an environment variable on both the web app and worker app in Dokploy.
+as an environment variable on the app in Dokploy.
 
 ## Gotcha #2 — No dedicated "Build Command" field
 
 Unlike Vercel/Railway, Dokploy's Nixpacks builder reads `package.json` scripts automatically and has no separate Build Command / Start Command UI field. To override the detected commands, set these as **environment variables** instead:
 
-**Web app:**
 ```
 NIXPACKS_BUILD_CMD=npx prisma generate && next build
 NIXPACKS_START_CMD=npx prisma migrate deploy && npm start
 ```
 
-**Worker app:**
-```
-NIXPACKS_BUILD_CMD=npm run db:generate
-NIXPACKS_START_CMD=npm run worker
-```
+`sidequest.jobs.mjs` at the repo root must ship with the app: the job runtime loads it at startup.
 
 ## Gotcha #3 — Migrations must run at start, not build
 
@@ -77,9 +72,8 @@ instance they simply never run — and none of them fails loudly:
 - **`snapshot-followers`** keeps the follower history, which Instagram only
   retains for ~30 days.
 
-**Fix:** run `scripts/cron.sh` as a fourth service, from the same image as the
-web app — the same pattern as the worker, so the jobs live and die with the app
-they belong to:
+**Fix:** run `scripts/cron.sh` as another service, from the same image as the
+web app, so the jobs live and die with the app they belong to:
 
 ```yaml
   cron:
@@ -105,13 +99,12 @@ when most of the comments arrive.
 ## Step-by-step
 
 1. Fork this repo.
-2. In Dokploy: **Create → Database → MySQL** and **Create → Database → Redis**. Note their internal service hostnames.
+2. In Dokploy: **Create → Database → MySQL**. Note its internal service hostname.
 3. In Dokploy: **Create → Application**, connect your fork, `main` branch. This is the web app.
-4. Add the `nixpacks.toml` file (Gotcha #1) to your fork's root, and set the environment variables from Gotchas #1 and #2 (web app version) plus the standard variables from `.env.example` — pointing `DATABASE_URL` and `REDIS_URL` at the internal hostnames from step 2.
-5. Assign a domain to the web app only (not the worker) in Dokploy's Domains section, container port `3000`. This becomes your `NEXTAUTH_URL`.
-6. Repeat step 3 for a second Application — this is the worker. Use the worker's build/start commands from Gotcha #2, and the same full set of environment variables as the web app, especially `DATABASE_URL`, `REDIS_URL`, and `ENCRYPTION_KEY` (these three must match exactly between both apps, or DM sends will fail to decrypt).
-7. Deploy both apps.
-8. Add the cron service from Gotcha #4, so the scheduled jobs actually run.
-9. Check `https://your-domain/api/health` — confirms database, Redis, queue, and worker heartbeat are all healthy.
+4. Add the `nixpacks.toml` file (Gotcha #1) to your fork's root, and set the environment variables from Gotchas #1 and #2 plus the standard variables from `.env.example` — pointing `DATABASE_URL` at the internal hostname from step 2.
+5. Assign a domain to the web app in Dokploy's Domains section, container port `3000`. This becomes your `NEXTAUTH_URL`.
+6. Deploy the app.
+7. Add the cron service from Gotcha #4, so the scheduled jobs actually run.
+8. Check `https://your-domain/api/health` — confirms database, queue, and worker heartbeat are all healthy.
 
 From here, the Meta app setup, OAuth redirect, and webhook configuration are identical to the standard setup in `docs/setup.md`.

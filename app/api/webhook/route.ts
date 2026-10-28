@@ -130,8 +130,9 @@ export async function POST(request: NextRequest) {
           mid: event.mid,
         },
         {
-          // BullMQ forbids ":" in custom job ids, and the payload is
-          // "reveal:<id>", so build with underscores and strip any colons.
+          // Dedup key for repeat deliveries of the same tap. The payload is
+          // "reveal:<id>"; colons are swapped for underscores to keep the key
+          // in the same format as the others.
           jobId: `postback_${event.instagramAccountId}_${event.userId}_${(
             event.mid ?? event.payload
           ).replace(/:/g, "_")}`,
@@ -159,10 +160,9 @@ export async function POST(request: NextRequest) {
           senderId: event.senderId,
         },
         {
-          // Message ids can contain characters BullMQ rejects in a job id (":"
-          // in particular). base64url encodes into exactly the allowed alphabet
-          // and stays injective — substituting invalid characters would let two
-          // distinct mids collapse onto one job id, silently dropping a reply.
+          // Message ids can contain arbitrary characters. base64url keeps the
+          // key plain and stays injective — substituting characters would let
+          // two distinct mids collapse onto one key, silently dropping a reply.
           jobId: `message_${event.instagramAccountId}_${Buffer.from(
             event.messageId
           ).toString("base64url")}`,

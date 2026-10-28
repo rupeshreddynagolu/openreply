@@ -1,38 +1,48 @@
 /**
  * Rate Limiter — Unit Tests
  *
- * Tests the hourly private-reply cap enforcement using mocked Redis.
+ * Tests the hourly private-reply cap enforcement using a mocked Prisma client.
  * Assertions derive from RATE_LIMIT_MAX so they survive a change to the cap.
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockGet, mockEval, mockDel } = vi.hoisted(() => ({
-  mockGet: vi.fn(),
-  mockEval: vi.fn(),
-  mockDel: vi.fn(),
-}));
-
-vi.mock("ioredis", () => {
-  const MockRedis = vi.fn().mockImplementation(function (
-    this: Record<string, unknown>
-  ) {
-    this.get = mockGet;
-    this.eval = mockEval;
-    this.del = mockDel;
-    return this;
-  });
-  return { default: MockRedis };
+const { mockFindUnique, mockTx, mockPrisma } = vi.hoisted(() => {
+  const mockTx = {
+    $queryRaw: vi.fn(),
+    rateLimitCounter: { update: vi.fn() },
+  };
+  const mockFindUnique = vi.fn();
+  return {
+    mockFindUnique,
+    mockTx,
+    mockPrisma: {
+      rateLimitCounter: { findUnique: mockFindUnique, deleteMany: vi.fn() },
+      $executeRaw: vi.fn(),
+      $transaction: vi.fn(
+        async (fn: (tx: typeof mockTx) => Promise<unknown>) => fn(mockTx)
+      ),
+    },
+  };
 });
 
-vi.stubEnv("REDIS_URL", "redis://localhost:6379");
+vi.mock("@/lib/db/client", () => ({ prisma: mockPrisma }));
 
 import {
   checkRateLimit,
   incrementDMCounter,
   reserveDMSlot,
   RATE_LIMIT_MAX,
+  RATE_LIMIT_WINDOW,
 } from "../lib/utils/rate-limiter";
+
+const inAnHour = () => new Date(Date.now() + 60 * 60 * 1000);
+const anHourAgo = () => new Date(Date.now() - 60 * 60 * 1000);
+
+// The row the locked SELECT returns inside the reservation transaction.
+function lockedRow(count: number, expiresAt: Date) {
+  mockTx.$queryRaw.mockResolvedValue([{ count, expiresAt }]);
+}
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -40,10 +50,13 @@ beforeEach(() => {
 
 describe("checkRateLimit", () => {
   it("should allow when count is below limit", async () => {
-    mockGet.mockResolvedValue("50");
+    mockFindUnique.mockResolvedValue({ count: 50, expiresAt: inAnHour() });
 
     const result = await checkRateLimit("account_123");
 
+    expect(mockFindUnique).toHaveBeenCalledWith({
+      where: { key: "rate:dm:account_123" },
+    });
     expect(result.allowed).toBe(true);
     expect(result.currentCount).toBe(50);
     expect(result.remainingDMs).toBe(RATE_LIMIT_MAX - 50);
@@ -53,7 +66,7 @@ describe("checkRateLimit", () => {
   });
 
   it("should allow when no previous count exists", async () => {
-    mockGet.mockResolvedValue(null);
+    mockFindUnique.mockResolvedValue(null);
 
     const result = await checkRateLimit("account_123");
 
@@ -62,8 +75,23 @@ describe("checkRateLimit", () => {
     expect(result.remainingDMs).toBe(RATE_LIMIT_MAX);
   });
 
+  it("should treat an expired window as empty", async () => {
+    mockFindUnique.mockResolvedValue({
+      count: RATE_LIMIT_MAX,
+      expiresAt: anHourAgo(),
+    });
+
+    const result = await checkRateLimit("account_123");
+
+    expect(result.allowed).toBe(true);
+    expect(result.currentCount).toBe(0);
+  });
+
   it("should deny when count reaches the limit", async () => {
-    mockGet.mockResolvedValue(String(RATE_LIMIT_MAX));
+    mockFindUnique.mockResolvedValue({
+      count: RATE_LIMIT_MAX,
+      expiresAt: inAnHour(),
+    });
 
     const result = await checkRateLimit("account_123");
 
@@ -73,7 +101,10 @@ describe("checkRateLimit", () => {
   });
 
   it("should skip after max requeue attempts", async () => {
-    mockGet.mockResolvedValue(String(RATE_LIMIT_MAX));
+    mockFindUnique.mockResolvedValue({
+      count: RATE_LIMIT_MAX,
+      expiresAt: inAnHour(),
+    });
 
     const result = await checkRateLimit("account_123", 3);
 
@@ -84,29 +115,43 @@ describe("checkRateLimit", () => {
 });
 
 describe("reserveDMSlot", () => {
-  it("should atomically reserve a slot when below the hourly cap", async () => {
-    mockEval.mockResolvedValue([1, 51, 139]);
+  it("should reserve a slot inside the current window when below the cap", async () => {
+    const expiresAt = inAnHour();
+    lockedRow(50, expiresAt);
 
     const result = await reserveDMSlot("account_123");
 
-    expect(mockEval).toHaveBeenCalledWith(
-      expect.any(String),
-      1,
-      "rate:dm:account_123",
-      RATE_LIMIT_MAX,
-      3600
-    );
+    expect(mockTx.rateLimitCounter.update).toHaveBeenCalledWith({
+      where: { key: "rate:dm:account_123" },
+      data: { count: 51, expiresAt },
+    });
     expect(result.allowed).toBe(true);
     expect(result.reserved).toBe(true);
     expect(result.currentCount).toBe(51);
-    expect(result.remainingDMs).toBe(139);
+    expect(result.remainingDMs).toBe(RATE_LIMIT_MAX - 51);
   });
 
-  it("should recommend requeue when the atomic reserve is denied", async () => {
-    mockEval.mockResolvedValue([0, RATE_LIMIT_MAX, 0]);
+  it("should open a fresh one-hour window when the previous one expired", async () => {
+    lockedRow(RATE_LIMIT_MAX, anHourAgo());
+    const before = Date.now();
+
+    const result = await reserveDMSlot("account_123");
+
+    const { data } = mockTx.rateLimitCounter.update.mock.calls[0][0];
+    expect(data.count).toBe(1);
+    expect(data.expiresAt.getTime()).toBeGreaterThanOrEqual(
+      before + RATE_LIMIT_WINDOW * 1000
+    );
+    expect(result.allowed).toBe(true);
+    expect(result.currentCount).toBe(1);
+  });
+
+  it("should recommend requeue when the cap is reached", async () => {
+    lockedRow(RATE_LIMIT_MAX, inAnHour());
 
     const result = await reserveDMSlot("account_123", 0);
 
+    expect(mockTx.rateLimitCounter.update).not.toHaveBeenCalled();
     expect(result.allowed).toBe(false);
     expect(result.reserved).toBe(false);
     expect(result.shouldRequeue).toBe(true);
@@ -114,7 +159,7 @@ describe("reserveDMSlot", () => {
   });
 
   it("should skip after max requeue attempts", async () => {
-    mockEval.mockResolvedValue(["0", String(RATE_LIMIT_MAX), "0"]);
+    lockedRow(RATE_LIMIT_MAX, inAnHour());
 
     const result = await reserveDMSlot("account_123", 3);
 
@@ -126,11 +171,11 @@ describe("reserveDMSlot", () => {
 
 describe("incrementDMCounter", () => {
   it("should use the atomic reservation path", async () => {
-    mockEval.mockResolvedValue([1, 51, 139]);
+    lockedRow(50, inAnHour());
 
     const count = await incrementDMCounter("account_123");
 
-    expect(mockEval).toHaveBeenCalled();
+    expect(mockPrisma.$transaction).toHaveBeenCalled();
     expect(count).toBe(51);
   });
 });

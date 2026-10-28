@@ -1,22 +1,15 @@
 /**
- * BullMQ Queue Client
+ * DM Queue Client
  *
- * Provides the DM processing queue and Redis connection for BullMQ.
+ * Enqueues DM jobs on the Sidequest queue in MySQL. Keeps the shape of the
+ * BullMQ queue it replaced — add(name, data, { jobId, delay }) — so call sites
+ * read the same.
  */
 
-import { Queue } from "bullmq";
-import Redis from "ioredis";
-
-let connection: Redis | null = null;
-
-export function getRedisConnection(): Redis {
-  if (!connection) {
-    connection = new Redis(process.env.REDIS_URL!, {
-      maxRetriesPerRequest: null, // Required by BullMQ
-    });
-  }
-  return connection;
-}
+import { DuplicatedJobError, Sidequest } from "sidequest";
+import { prisma } from "@/lib/db/client";
+import { DM_JOB_MAX_ATTEMPTS, DmJob } from "@/lib/jobs/dm-job";
+import { DM_QUEUE, ensureSidequest } from "@/lib/jobs/sidequest";
 
 // ─── DM Queue ───────────────────────────────────────────────────────────────────
 
@@ -76,27 +69,96 @@ export const POSTBACK_JOB_NAME = "process-postback";
 export const FOLLOWUP_JOB_NAME = "process-followup";
 export const MESSAGE_JOB_NAME = "process-message";
 
-let dmQueue: Queue<DmQueueJob> | null = null;
+export interface DmJobOptions {
+  // Deterministic id for deduplication: while a job with the same name, data
+  // and id is still waiting or running, adding it again is a no-op. Finished
+  // jobs do not block a re-add, so a failed comment can be retried by a later
+  // reconciler sweep. Failure detail is preserved in DmLog.
+  jobId?: string;
+  // Milliseconds before the job may run.
+  delay?: number;
+}
 
-export function getDMQueue(): Queue<DmQueueJob> {
-  if (!dmQueue) {
-    dmQueue = new Queue<DmQueueJob>("dm-processing", {
-      connection: getRedisConnection(),
-      defaultJobOptions: {
-        removeOnComplete: { count: 1000 }, // Keep last 1000 completed jobs
-        // Clear failed jobs shortly after they exhaust retries. Job ids are
-        // deterministic (comment_<acct>_<id>), so a retained failed job would
-        // block the polling reconciler from ever retrying that comment. Clearing
-        // them lets a later sweep re-enqueue and try again once a transient
-        // failure (e.g. an Instagram rate-limit window) has passed. Failure
-        // detail is still preserved in DmLog.
-        removeOnFail: { age: 300, count: 2000 },
-        attempts: 3,
-        backoff: {
-          type: "custom",
-        },
-      },
-    });
+export interface DmQueueCounts {
+  waiting: number;
+  active: number;
+  delayed: number;
+  failed: number;
+}
+
+export interface DmQueue {
+  add(name: string, data: DmQueueJob, opts?: DmJobOptions): Promise<void>;
+  getJobCounts(): Promise<DmQueueCounts>;
+}
+
+async function add(
+  name: string,
+  data: DmQueueJob,
+  opts: DmJobOptions = {}
+): Promise<void> {
+  await ensureSidequest();
+
+  const builder = Sidequest.build(DmJob)
+    .queue(DM_QUEUE)
+    .maxAttempts(DM_JOB_MAX_ATTEMPTS)
+    // DmJob returns the exact retry delay from its own ladder; the default
+    // exponential strategy would scale and jitter it again.
+    .backoffStrategy("fixed")
+    .availableAt(new Date(Date.now() + Math.max(0, opts.delay ?? 0)));
+  if (opts.jobId) {
+    builder.unique({ withArgs: true });
   }
+
+  try {
+    await builder.enqueue(name, data, opts.jobId ?? null);
+  } catch (error) {
+    // Same job still pending: the duplicate is dropped, as BullMQ did.
+    if (isDuplicatedJobError(error)) return;
+    throw error;
+  }
+}
+
+// Matched by class name as well as instanceof: the MySQL driver can load its
+// own copy of @sidequest/core (CJS next to ESM), whose error class is a
+// different object from the one imported here.
+function isDuplicatedJobError(error: unknown): boolean {
+  return (
+    error instanceof DuplicatedJobError ||
+    (error instanceof Error && error.constructor.name === "DuplicatedJobError")
+  );
+}
+
+async function getJobCounts(): Promise<DmQueueCounts> {
+  await ensureSidequest();
+
+  // "delayed" is a waiting job whose time has not come yet; Sidequest has no
+  // separate state for it. claimed + running together are what BullMQ called
+  // active.
+  const rows = await prisma.$queryRaw<{ bucket: string; count: bigint }[]>`
+    SELECT
+      CASE
+        WHEN state = 'waiting' AND available_at > UTC_TIMESTAMP(3) THEN 'delayed'
+        WHEN state IN ('claimed', 'running') THEN 'active'
+        ELSE state
+      END AS bucket,
+      COUNT(*) AS count
+    FROM sidequest_jobs
+    WHERE queue = ${DM_QUEUE}
+      AND state IN ('waiting', 'claimed', 'running', 'failed')
+    GROUP BY bucket
+  `;
+
+  const counts: DmQueueCounts = { waiting: 0, active: 0, delayed: 0, failed: 0 };
+  for (const row of rows) {
+    if (row.bucket in counts) {
+      counts[row.bucket as keyof DmQueueCounts] = Number(row.count);
+    }
+  }
+  return counts;
+}
+
+const dmQueue: DmQueue = { add, getJobCounts };
+
+export function getDMQueue(): DmQueue {
   return dmQueue;
 }
