@@ -1,0 +1,27 @@
+-- CreateTable
+CREATE TABLE `RateLimitCounter` (
+    `key` VARCHAR(191) NOT NULL,
+    `count` INTEGER NOT NULL,
+    `expiresAt` DATETIME(3) NOT NULL,
+
+    PRIMARY KEY (`key`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `WorkerHeartbeat` (
+    `id` VARCHAR(191) NOT NULL,
+    `payload` JSON NOT NULL,
+    `checkedAt` DATETIME(3) NOT NULL,
+
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `WorkerAlert` (
+    `id` VARCHAR(191) NOT NULL,
+    `payload` JSON NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    INDEX `WorkerAlert_createdAt_idx`(`createdAt`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

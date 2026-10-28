@@ -53,11 +53,11 @@ Flowly is built around Meta's official Instagram private replies. It does not sc
 4. On a keyword match, it queues a job.
 5. A background worker sends the private reply, and the public reply if you enabled one.
 
-The web app receives the webhook and serves the dashboard. A separate worker process does the sending, because the send has to survive rate limits and retries. Both talk to the same MySQL and Redis.
+The web app receives the webhook and serves the dashboard. Jobs are queued in MySQL and sent by a job runtime that starts inside the same Node process, so they survive rate limits, retries and restarts with no Redis and no second process. On serverless hosts the runtime runs as its own worker instead.
 
 ## Quick start
 
-You need a few free accounts before anything works: a Meta developer app, a Resend account for login emails, and somewhere to host (Vercel for the web app, Railway for the worker plus MySQL and Redis). The Instagram account you connect has to be a Business or Creator account, not a personal one.
+You need a few free accounts before anything works: a Meta developer app, a Resend account for login emails, and somewhere to host (any Node host with MySQL — or Vercel for the web app plus Railway for the worker and MySQL). The Instagram account you connect has to be a Business or Creator account, not a personal one.
 
 The honest version: the code deploys in minutes, but the Meta app setup is the part that takes real time. Read [docs/setup.md](docs/setup.md) before you start. It is the single setup guide, covering hosting, your domain, the environment, and every Meta wrong turn so you do not have to find them yourself.
 
@@ -74,13 +74,12 @@ git clone https://github.com/rupeshreddynagolu/openreply.git
 cd openreply
 npm install
 cp .env.example .env      # then fill in the values, see docs/setup.md
-docker-compose up -d      # starts MySQL and Redis
+docker-compose up -d      # starts MySQL
 npm run db:migrate
-npm run dev               # web app on http://localhost:3000
-npm run worker            # in a second terminal, this sends the DMs
+npm run dev               # web app on http://localhost:3000, sends DMs too
 ```
 
-Two processes, always. `npm run dev` serves the app and receives webhooks. `npm run worker` is what actually sends the messages. If comments come in and no DM ever arrives, the worker is the first thing to check.
+One process. `npm run dev` serves the app, receives webhooks, and runs the job runtime that sends the messages. If comments come in and no DM ever arrives, check `/api/health` and the log for `[DM Worker] Started`.
 
 Full environment variables and the production layout are in [docs/setup.md](docs/setup.md).
 
@@ -92,12 +91,12 @@ If you use Claude Code, Cursor, or a similar tool, the Meta setup is a lot faste
 
 - Next.js 16 and React 19 for the web app and API routes
 - Prisma 7 with MySQL
-- BullMQ on Redis for the send queue and the worker
+- Sidequest on MySQL for the send queue (no Redis)
 - Auth.js (NextAuth) with email magic links through Resend
 - Tailwind CSS for the interface
 - The official Instagram API with Instagram Login
 
-For the complete stack — application libraries, the two runtime processes, and the free services this runs on (Vercel, Neon, Redis Cloud, an Oracle Cloud always-free VM for the worker, Resend, Meta) — see [docs/stack.md](docs/stack.md).
+For the complete stack — application libraries, the runtime, and the free services this runs on — see [docs/stack.md](docs/stack.md).
 
 ## Contributing
 

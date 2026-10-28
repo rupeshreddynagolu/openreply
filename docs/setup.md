@@ -6,21 +6,20 @@ If you would rather have an AI assistant drive most of this, skip to [Set it up 
 
 ## How it is built
 
-Flowly is two processes and two datastores.
+Flowly is one Next.js app and one MySQL database.
 
-- Web app and API: Next.js. Serves the dashboard, the OAuth callback, and the incoming webhook. Runs well on Vercel.
-- Worker: a long-running Node process (`npm run worker`) that consumes the send queue and runs the polling reconciler. It cannot run on Vercel, because serverless functions are short-lived and a queue consumer has to stay up. Railway, Render, Fly, or any always-on box works.
-- MySQL: campaigns, logs, accounts, sessions.
-- Redis: the BullMQ send queue and the per-account rate limiter.
+- Web app and API: Next.js. Serves the dashboard, the OAuth callback, and the incoming webhook.
+- Job runtime: the send queue, the worker heartbeat, and the polling reconciler. It is started by `instrumentation.ts` inside the web process, so on a normal Node host (a VPS, cPanel's Node.js app, Railway, Render) there is nothing else to run.
+- MySQL: campaigns, logs, accounts, sessions — and the job queue itself ([Sidequest](https://sidequestjs.com), `sidequest_*` tables) and the per-account rate limiter. No Redis.
 
-The web app and the worker must share the same `DATABASE_URL`, the same `REDIS_URL`, and the same `ENCRYPTION_KEY`. The web app writes an encrypted Instagram token; the worker decrypts it to send. Different keys mean every send fails to decrypt.
+Serverless hosts like Vercel cannot keep the job runtime alive between requests. There, set `RUN_JOBS=false` on the web app and run the same runtime as its own always-on process with `npm run worker`. The two must then share the same `DATABASE_URL` and the same `ENCRYPTION_KEY`: the web app writes an encrypted Instagram token, the worker decrypts it to send, and different keys mean every send fails to decrypt.
 
 ## What you need first
 
 - A Facebook account. Meta developer registration is built on it. There is no Instagram-only path.
 - An Instagram Business or Creator account. A personal account cannot be connected. Switch it in the Instagram app under Settings, Account type, if needed.
 - A [Resend](https://resend.com) account for login emails, with a verified sender domain. Login is email magic links only, so without this nobody can sign in. If you already run your own mail server, you can point `EMAIL_SERVER` at it instead and skip Resend entirely — see the [environment variables](#environment-variables) table.
-- Somewhere to host. The recommended setup, used throughout this guide, is Vercel for the web app and Railway for the worker plus MySQL and Redis. Both have free tiers that are enough to run this for a single account.
+- Somewhere to host. The recommended setup, used throughout this guide, is Vercel for the web app and Railway for the worker plus MySQL. Both have free tiers that are enough to run this for a single account.
 
 ## Hosting and your domain
 
@@ -29,23 +28,22 @@ You do not need to buy a domain. Deploying the web app to Vercel gives you a fre
 Recommended split:
 
 - Web app: Vercel. You get `your-app.vercel.app` for free on deploy.
-- Worker, MySQL, Redis: Railway.
+- Worker, MySQL: Railway.
 
 Do Railway first, because Vercel needs the database URLs from it.
 
-### Step 1: Railway (MySQL, Redis, worker)
+### Step 1: Railway (MySQL, worker)
 
 1. Create a Railway account and a New Project.
 2. In the project, click New, then Database, then Add MySQL.
-3. Click New, then Database, then Add Redis.
-4. Add the worker: click New, then GitHub Repo, and select your fork of this repo. Railway detects the Node app.
-5. Open the worker service's Settings and set the Build Command and Start Command:
+3. Add the worker: click New, then GitHub Repo, and select your fork of this repo. Railway detects the Node app.
+4. Open the worker service's Settings and set the Build Command and Start Command:
    ```
    Build Command:  npm run db:generate
    Start Command:  npm run worker
    ```
    The worker only needs the generated Prisma client, not `next build`. Do not leave the build as the default `npm run build`: it runs `next build` needlessly, and any build step that reaches the database (like `prisma migrate deploy`) fails here, because the worker cannot connect to MySQL at build time. Migrations are applied by the web app's `vercel-build` (Step 3) and by the manual `db:migrate` below, never by the worker.
-6. Open the worker service's Variables and add all the environment variables from the [table below](#environment-variables). For the worker, use Railway's internal database and Redis hostnames (they look like `mysql.railway.internal` and `redis.railway.internal`); inside Railway's network they are faster and free of egress. `NEXTAUTH_URL` is your Vercel domain. `ENCRYPTION_KEY` must be the exact same value you will use on Vercel.
+5. Open the worker service's Variables and add all the environment variables from the [table below](#environment-variables). For the worker, use Railway's internal database hostname (it looks like `mysql.railway.internal`); inside Railway's network they are faster and free of egress. `NEXTAUTH_URL` is your Vercel domain. `ENCRYPTION_KEY` must be the exact same value you will use on Vercel.
 
 Getting the connection URLs. Open the MySQL service, then its Variables or Connect tab. You will see two URLs:
 
@@ -53,8 +51,6 @@ Getting the connection URLs. Open the MySQL service, then its Variables or Conne
 | --- | --- | --- |
 | `DATABASE_URL` | `mysql.railway.internal` | the Railway worker only |
 | `DATABASE_PUBLIC_URL` | `*.proxy.rlwy.net` | Vercel, and running migrations from your machine |
-
-Redis is the same: `REDIS_URL` (internal) for the worker, `REDIS_PUBLIC_URL` (public proxy) for Vercel.
 
 Vercel runs outside Railway's private network, so if you give Vercel an internal `*.railway.internal` URL it will hang and time out. Always give Vercel the public URLs.
 
@@ -71,7 +67,8 @@ DATABASE_URL="mysql://...proxy.rlwy.net.../railway" npm run db:migrate
 1. Create a Vercel account and Add New Project, importing your fork. It auto-detects Next.js.
 2. Under the project's Settings, then Environment Variables, add every variable from the [table below](#environment-variables). Use these values:
    - `NEXTAUTH_URL`: your Vercel domain, for example `https://your-app.vercel.app`. This is the free domain Vercel assigns on deploy.
-   - `DATABASE_URL` and `REDIS_URL`: the public Railway URLs (`DATABASE_PUBLIC_URL` and `REDIS_PUBLIC_URL` from Railway).
+   - `DATABASE_URL`: the public Railway URL (`DATABASE_PUBLIC_URL` from Railway).
+   - `RUN_JOBS`: `false`. The Railway worker runs the jobs; a serverless function cannot.
    - `ENCRYPTION_KEY`: the exact same value as on the worker.
 3. Deploy. The build runs `prisma generate` before `next build`, so the Prisma client is generated even though it is gitignored.
 4. The daily token-refresh cron is wired up in `vercel.json`.
@@ -91,7 +88,7 @@ Copy `.env.example` to `.env` for local work, or set these in Vercel and Railway
 | `CRON_SECRET` | Random secret protecting the token-refresh cron. |
 | `ENCRYPTION_KEY` | 32-byte hex. `openssl rand -hex 32`. Encrypts Instagram tokens. Identical across web and worker. |
 | `DATABASE_URL` | MySQL connection string. Public Railway URL on Vercel; internal on the worker. |
-| `REDIS_URL` | Redis connection string. Must support blocking commands, so an HTTP-only Redis will not work with BullMQ. |
+| `RUN_JOBS` | Optional, default on. Set to `false` on a web app whose jobs run in a separate `npm run worker` process (Vercel, or any split deployment), so the queue, heartbeat and reconciler run once. |
 | `RESEND_API_KEY` | Resend key. Login is email magic links only, so without this nobody can sign in. |
 | `EMAIL_FROM` | A sender on a domain you verified in Resend. The placeholder will not deliver. |
 | `EMAIL_SERVER` | Optional. An SMTP URL, for example `smtps://login%40example.com:password@mail.example.com:465`. Set it to send magic links through your own mail server instead of Resend; then `RESEND_API_KEY` is not needed. URL-encode special characters in the user and password (`@` becomes `%40`). Port 465 with `smtps://` is implicit TLS, port 587 with `smtp://` is STARTTLS. |
@@ -230,13 +227,13 @@ Meta's `/me` returns two IDs. The `id` field is app-scoped. The `user_id` field 
 4. From a different Instagram account, comment `TEST` on that post. It must be a different account, because Flowly ignores your own comments on purpose.
 5. Watch for the DM. If nothing arrives, check the DM Logs page and `/api/health`.
 
-Hit `/api/health` any time. It reports the database, Redis, queue, and worker heartbeat. If `worker.healthy` is false, the worker is not running or cannot reach Redis, and no DM will send even though webhooks are being received.
+Hit `/api/health` any time. It reports the database, queue, and worker heartbeat. If `worker.healthy` is false, the job runtime is not running (check the server log for `[DM Worker] Started`, or the worker process on split deployments), and no DM will send even though webhooks are being received.
 
 If you want to inspect where a comment stopped, the MySQL tables tell you: `WebhookEvent` for delivery, `DmLog` for send status and errors, `OperationalEvent` for worker crashes and the polling reconciler's sweep logs.
 
 ## Local development
 
-You need MySQL and Redis. The included `docker-compose.yml` starts both:
+You need MySQL. The included `docker-compose.yml` starts it:
 
 ```bash
 docker-compose up -d
@@ -247,19 +244,17 @@ npm run db:migrate
 Or install them natively (macOS):
 
 ```bash
-brew install mysql redis
+brew install mysql
 brew services start mysql
-brew services start redis
 mysql -uroot -e "CREATE DATABASE openreply"
 ```
 
 Then set `DATABASE_URL` to match your local user, for example `mysql://root@localhost:3306/openreply`.
 
-Run the two processes in separate terminals:
+Then start the app. The job runtime starts with it, so DMs send from this one process:
 
 ```bash
 npm run dev
-npm run worker
 ```
 
 For Meta to reach your local webhook, run a tunnel and point `NEXTAUTH_URL` and the Meta webhook and redirect URLs at the tunnel:
@@ -286,11 +281,11 @@ Work through this in order and stop to ask me whenever you need a value or an
 action only I can do:
 
 1. Local or hosted. Ask me which I want. If hosted, we use Vercel for the web
-   app (its domain becomes my public URL) and Railway for the worker plus
-   MySQL and Redis. If local, we use docker-compose and a tunnel.
+   app (its domain becomes my public URL, with RUN_JOBS=false) and Railway
+   for the worker plus MySQL. If local, we use docker-compose and a tunnel.
 
-2. Datastores. Help me get a MySQL and a Redis running, then run the Prisma
-   migration against them.
+2. Database. Help me get a MySQL running, then run the Prisma migration
+   against it.
 
 3. Environment. Generate NEXTAUTH_SECRET, CRON_SECRET, ENCRYPTION_KEY, and
    WEBHOOK_VERIFY_TOKEN for me. Ask me for my Resend API key and a verified

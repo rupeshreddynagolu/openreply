@@ -1,7 +1,7 @@
-import { getRedisConnection } from "@/lib/queue/client";
+import { prisma } from "@/lib/db/client";
 
-const WORKER_HEALTH_KEY = "health:worker:dm";
-const WORKER_ALERTS_KEY = "alerts:worker:dm";
+const WORKER_ID = "dm";
+const WORKER_ALERTS_KEEP = 25;
 const WORKER_HEARTBEAT_TTL_SECONDS = 120;
 
 export interface WorkerHeartbeat {
@@ -28,43 +28,37 @@ export interface WorkerAlert {
   createdAt: string;
 }
 
-function parseJson<T>(value: string | null): T | null {
-  if (!value) return null;
-  try {
-    return JSON.parse(value) as T;
-  } catch {
-    return null;
-  }
-}
-
 export async function recordWorkerHeartbeat(
   heartbeat: Omit<WorkerHeartbeat, "checkedAt" | "status" | "worker">
 ) {
+  const checkedAt = new Date();
   const payload: WorkerHeartbeat = {
     ...heartbeat,
     status: "running",
     worker: "dm",
-    checkedAt: new Date().toISOString(),
+    checkedAt: checkedAt.toISOString(),
   };
 
-  await getRedisConnection().set(
-    WORKER_HEALTH_KEY,
-    JSON.stringify(payload),
-    "EX",
-    WORKER_HEARTBEAT_TTL_SECONDS
-  );
+  await prisma.workerHeartbeat.upsert({
+    where: { id: WORKER_ID },
+    create: { id: WORKER_ID, payload: { ...payload }, checkedAt },
+    update: { payload: { ...payload }, checkedAt },
+  });
 }
 
 export async function getWorkerHealth(): Promise<WorkerHealth> {
-  const heartbeat = parseJson<WorkerHeartbeat>(
-    await getRedisConnection().get(WORKER_HEALTH_KEY)
-  );
+  const row = await prisma.workerHeartbeat.findUnique({
+    where: { id: WORKER_ID },
+  });
 
-  if (!heartbeat) {
+  if (!row) {
     return { healthy: false, heartbeat: null, ageMs: null };
   }
 
-  const ageMs = Date.now() - new Date(heartbeat.checkedAt).getTime();
+  // The row is never deleted, so a stopped worker leaves a stale heartbeat
+  // behind; age decides health, as the Redis key's TTL used to.
+  const heartbeat = row.payload as unknown as WorkerHeartbeat;
+  const ageMs = Date.now() - row.checkedAt.getTime();
   return {
     healthy: ageMs <= WORKER_HEARTBEAT_TTL_SECONDS * 1000,
     heartbeat,
@@ -73,24 +67,34 @@ export async function getWorkerHealth(): Promise<WorkerHealth> {
 }
 
 export async function recordWorkerAlert(alert: Omit<WorkerAlert, "createdAt">) {
+  const createdAt = new Date();
   const payload: WorkerAlert = {
     ...alert,
-    createdAt: new Date().toISOString(),
+    createdAt: createdAt.toISOString(),
   };
 
-  const redis = getRedisConnection();
-  await redis.lpush(WORKER_ALERTS_KEY, JSON.stringify(payload));
-  await redis.ltrim(WORKER_ALERTS_KEY, 0, 24);
+  await prisma.workerAlert.create({
+    data: { payload: { ...payload }, createdAt },
+  });
+
+  // Keep only the newest alerts, like the capped Redis list did.
+  const stale = await prisma.workerAlert.findMany({
+    orderBy: { createdAt: "desc" },
+    skip: WORKER_ALERTS_KEEP,
+    select: { id: true },
+  });
+  if (stale.length > 0) {
+    await prisma.workerAlert.deleteMany({
+      where: { id: { in: stale.map((row) => row.id) } },
+    });
+  }
 }
 
 export async function getWorkerAlerts(limit = 10): Promise<WorkerAlert[]> {
-  const values = await getRedisConnection().lrange(
-    WORKER_ALERTS_KEY,
-    0,
-    Math.max(0, limit - 1)
-  );
+  const rows = await prisma.workerAlert.findMany({
+    orderBy: { createdAt: "desc" },
+    take: Math.max(1, limit),
+  });
 
-  return values
-    .map((value) => parseJson<WorkerAlert>(value))
-    .filter((value): value is WorkerAlert => Boolean(value));
+  return rows.map((row) => row.payload as unknown as WorkerAlert);
 }

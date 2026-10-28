@@ -5,6 +5,20 @@ import { defineConfig } from "prisma/config";
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
+  // The job queue's tables are created and migrated by Sidequest itself
+  // (lib/jobs/sidequest.ts). Without this, `prisma migrate dev` sees them as
+  // drift and offers to reset the database.
+  experimental: {
+    externalTables: true,
+  },
+  tables: {
+    external: [
+      "sidequest_jobs",
+      "sidequest_queues",
+      "sidequest_migrations",
+      "sidequest_migrations_lock",
+    ],
+  },
   migrations: {
     path: "prisma/migrations",
   },
