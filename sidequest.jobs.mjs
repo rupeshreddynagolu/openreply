@@ -14,3 +14,7 @@ if (!jobs?.DmJob) {
 }
 
 export const DmJob = jobs.DmJob;
+
+// The runner falls back to the default export when no export matches the
+// stored class name — a backstop for jobs enqueued under another name.
+export default jobs.DmJob;
