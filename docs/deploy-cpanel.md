@@ -75,9 +75,19 @@ npm ci
 npm run package:cpanel
 ```
 
-This writes `dist/flowly-cpanel.zip` (about 22 MB). It contains the built app
-and only the `node_modules` it needs. Your local `.env` is stripped out of it;
-the server gets its own settings in step 5.
+This writes `dist/flowly-cpanel.zip` (about 21 MB). Its layout:
+
+```
+app.js          startup file Passenger runs
+package.json    no dependencies, so cPanel's npm install has nothing to do
+.env.example
+app/            the built app, with only the node_modules it needs
+```
+
+The built app sits in `app/` because CloudLinux's Node.js Selector reserves
+`node_modules` in the application root for a symlink into its own virtual
+environment, and its module install fails if a real folder is there. Your local
+`.env` is stripped out of the zip; the server gets its own settings in step 5.
 
 ## 4. Create the Node.js app
 
@@ -91,15 +101,17 @@ In cPanel, open **Setup Node.js App** and click **Create Application**:
 | Application URL | the domain or subdomain to serve Flowly on |
 | Application startup file | `app.js` |
 
-Click **Create**. Do **not** click **Run NPM Install**: the package already
-contains its dependencies, and cPanel's installer would try to replace them.
+Click **Create**. You don't need **Run NPM Install**: the package already
+contains its dependencies. Clicking it is harmless — the root `package.json`
+lists none, so it finishes with nothing installed.
 
 ## 5. Upload and configure
 
 1. Open **File Manager**, go to the application root (for example
-   `/home/cpuser/flowly`), upload `flowly-cpanel.zip`, and **Extract** it there.
-   Then delete the zip. In File Manager's **Settings**, turn on **Show Hidden
-   Files**, or you will not see the `.next` folder that was extracted.
+   `/home/cpuser/flowly`). If cPanel put a placeholder `app.js` there, delete it.
+   Upload `flowly-cpanel.zip`, **Extract** it there, then delete the zip. You
+   should see `app.js`, `package.json` and an `app` folder. Leave alone any
+   `node_modules` link cPanel created; the app does not use it.
 2. Set the environment variables. Either add them under **Environment
    variables** on the app's page in **Setup Node.js App**, or create a `.env`
    file in the application root (copy `.env.example`, which is in the package).
@@ -146,12 +158,19 @@ callback URL both use `https://yourdomain.com`.
 
 1. `git pull`, then run the migrations (step 2) if the release added any.
 2. `npm run package:cpanel`.
-3. In File Manager, delete the application root's `.next` folder (old build
-   chunks otherwise linger next to the new ones), then upload and extract the
-   new zip over the rest. Your `.env` is not in the zip, so it survives.
+3. In File Manager, delete the application root's `app` folder (old build
+   files otherwise linger next to the new ones), then upload and extract the
+   new zip. Your `.env` is not in the zip, so it survives.
 4. **Restart** the app in **Setup Node.js App**.
 
 ## Troubleshooting
+
+**"An error occured during installation of modules. Web application is
+inaccessible".** The application root holds a real `node_modules` folder,
+which the Node.js Selector refuses. That happens with a zip built before the
+`app/` layout, or after extracting the zip somewhere other than its root.
+Delete everything in the application root except `.env`, extract a freshly
+built zip, and restart.
 
 **The site shows a generic Passenger or 503 error.** Look at the app's log. On
 most CloudLinux hosts that is `stderr.log` in the application root; otherwise
