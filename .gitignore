@@ -43,3 +43,6 @@ next-env.d.ts
 
 /app/generated/prisma
 .gstack/
+
+# cPanel package (npm run package:cpanel)
+/dist/

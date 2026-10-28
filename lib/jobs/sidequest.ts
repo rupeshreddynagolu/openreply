@@ -10,6 +10,10 @@
 
 import path from "node:path";
 import { Sidequest, type SidequestConfig } from "sidequest";
+// Sidequest loads the driver below by name at runtime, which the standalone
+// build's file tracing cannot follow. Importing it here gets the driver and its
+// dependencies (knex, mysql2) into the cPanel package.
+import "@sidequest/mysql-backend";
 
 export const DM_QUEUE = "dm-processing";
 
