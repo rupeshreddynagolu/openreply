@@ -11,7 +11,7 @@ built or installed on the server, which shared hosts rarely have the memory for.
 
 ## What you need
 
-- cPanel with **Setup Node.js App**, offering **Node 20.19+, 22.12+ or 24+**.
+- cPanel with **Setup Node.js App**, offering **Node 22.12+ or 24+**.
   Prisma 7 and Next.js 16 refuse anything older. If the list stops at 18 or an
   early 20.x, ask your host for a newer Node; there is no workaround.
 - **MySQL Databases** in cPanel, on MySQL 8. MariaDB is untested with the job
@@ -83,7 +83,7 @@ In cPanel, open **Setup Node.js App** and click **Create Application**:
 
 | Field | Value |
 | --- | --- |
-| Node.js version | 20.19+, 22.12+ or 24+ |
+| Node.js version | 22.12+ or 24+ |
 | Application mode | Production |
 | Application root | a folder in your home directory, for example `flowly` |
 | Application URL | the domain or subdomain to serve Flowly on |
