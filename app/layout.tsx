@@ -3,9 +3,9 @@ import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Flowly - Open source Instagram comment-to-DM automation",
+  title: "Flowly - Instagram comment-to-DM automation",
   description:
-    "A free, self-hosted ManyChat alternative. Send an Instagram DM automatically when someone comments a keyword on your post or reel, using the official Meta API.",
+    "Send an Instagram DM automatically when someone comments a keyword on your post or reel, through Instagram's official API.",
   keywords: [
     "instagram automation",
     "comment to DM",
@@ -43,7 +43,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full dark">
+    <html lang="en" className="h-full dark" data-scroll-behavior="smooth">
       <body
         className="min-h-full bg-background text-foreground font-sans antialiased"
         // Clears the home indicator when installed; 0 everywhere else.

@@ -1,31 +1,35 @@
 import Link from "next/link";
+import SiteMenu from "@/components/site-menu";
 
 interface PublicSiteHeaderProps {
-  active?: "home" | "templates";
+  active?: "home" | "templates" | "agencies";
 }
 
+// The floating header used on the marketing pages other than the home page,
+// which has its own with in-page section links.
 const navLinks = [
+  { label: "How it works", href: "/#how", key: "how" },
   { label: "Templates", href: "/templates", key: "templates" },
-  { label: "Agencies", href: "/instagram-dm-automation-agencies", key: "agencies" },
-  { label: "Pricing", href: "/#pricing", key: "pricing" },
-  { label: "Security", href: "/#security", key: "security" },
+  { label: "For agencies", href: "/instagram-dm-automation-agencies", key: "agencies" },
+  { label: "Questions", href: "/#questions", key: "questions" },
 ];
 
 export default function PublicSiteHeader({ active }: PublicSiteHeaderProps) {
   return (
-    <header className="sticky top-0 z-40 border-b border-white/10 bg-background/85">
-      <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-5 sm:px-6 lg:px-8">
-        <Link href="/" className="flex items-center gap-3" aria-label="Flowly home">
-          <img src="/logo.png" alt="Flowly" className="h-8 w-auto" />
+    <header className="sticky top-0 z-40 px-3 pt-3 sm:px-5">
+      <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-4 rounded-full border border-ink/10 bg-white/85 pl-5 pr-2 shadow-[0_10px_30px_-18px_rgba(11,30,91,0.45)] backdrop-blur">
+        <Link href="/" aria-label="Flowly home" className="shrink-0">
+          <img src="/logo.png" alt="Flowly" className="h-7 w-auto" />
         </Link>
 
-        <nav className="hidden items-center gap-7 md:flex">
+        <nav aria-label="Site" className="hidden items-center gap-1 text-[15px] text-slate lg:flex">
           {navLinks.map((link) => (
             <Link
               key={link.key}
               href={link.href}
-              className={`text-sm font-medium transition ${
-                active === link.key ? "text-white" : "text-zinc-400 hover:text-white"
+              aria-current={active === link.key ? "page" : undefined}
+              className={`rounded-full px-4 py-2 hover:bg-mist hover:text-ink ${
+                active === link.key ? "bg-mist font-semibold text-ink" : ""
               }`}
             >
               {link.label}
@@ -33,19 +37,20 @@ export default function PublicSiteHeader({ active }: PublicSiteHeaderProps) {
           ))}
         </nav>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <Link
             href="/login"
-            className="hidden px-4 py-2 text-sm font-semibold text-zinc-300 transition hover:text-white sm:inline-flex"
+            className="hidden rounded-full px-4 py-2 text-[15px] font-semibold text-ink hover:bg-mist sm:inline-flex"
           >
             Sign in
           </Link>
           <Link
             href="/login"
-            className="inline-flex items-center justify-center bg-cyan-300 px-4 py-2 text-sm font-bold text-zinc-950 transition hover:bg-cyan-200"
+            className="rounded-full bg-signal px-5 py-2.5 text-sm font-semibold text-white hover:bg-signal-hover"
           >
-            Start free
+            Get started
           </Link>
+          <SiteMenu links={navLinks} />
         </div>
       </div>
     </header>
