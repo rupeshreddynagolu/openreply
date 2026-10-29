@@ -12,17 +12,17 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-// Prisma 7 and Next.js 16 need one of these. On an older Node the app dies
-// deep inside a dependency, and Passenger only shows a generic error page, so
-// fail early with a message that names the fix.
+// Prisma 7 needs Node 20.19+, 22.12+ or 24+, and Sidequest needs 22.6+, so
+// 22.12+ or 24+ covers both. On an older Node the app dies deep inside a
+// dependency, and Passenger only shows a generic error page, so fail early
+// with a message that names the fix.
 const [major, minor] = process.versions.node.split(".").map(Number);
-const supported =
-  (major === 20 && minor >= 19) || (major === 22 && minor >= 12) || major >= 24;
+const supported = (major === 22 && minor >= 12) || major >= 24;
 
 if (!supported) {
   console.error(
-    `[Flowly] Node ${process.versions.node} is too old. Pick Node 20.19+, ` +
-      "22.12+ or 24+ in cPanel's Setup Node.js App, then restart the app."
+    `[Flowly] Node ${process.versions.node} is too old. Pick Node 22.12+ ` +
+      "or 24+ in cPanel's Setup Node.js App, then restart the app."
   );
   process.exit(1);
 }

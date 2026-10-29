@@ -16,7 +16,7 @@ If you would rather run the jobs in their own container, add a second Applicatio
 
 ## Gotcha #1 — Node version
 
-The repo doesn't pin a Node version, so Nixpacks (Dokploy's default build system) will default to an old version — too old for this project's dependencies (Prisma 7 and Next.js 16 both require Node 20.19+, 22.12+, or 24+).
+The repo doesn't pin a Node version, so Nixpacks (Dokploy's default build system) will default to an old version — too old for this project's dependencies. Prisma 7 requires Node 20.19+, 22.12+, or 24+, and Sidequest requires 22.6+, so use Node 22.12+ or 24+.
 
 Depending on which Nixpacks version your Dokploy instance ships, you may also find:
 - Requesting Node 22 via `NIXPACKS_NODE_VERSION=22` resolves to a patch (e.g. 22.11.0) just below Prisma's 22.12 minimum
