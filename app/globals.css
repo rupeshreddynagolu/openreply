@@ -19,6 +19,13 @@
   --color-warning: #d97706;
   --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: ui-monospace, monospace;
+  /* Marketing palette, taken from the logo. */
+  --color-ink: #0b1e5b;
+  --color-signal: #1a5cff;
+  --color-signal-hover: #0f47d6;
+  --color-sky: #38c6ff;
+  --color-mist: #eef3ff;
+  --color-slate: #4a5578;
   --shadow-soft: 0 1px 2px rgba(79, 70, 229, 0.04), 0 4px 12px rgba(79, 70, 229, 0.06);
   --shadow-soft-hover: 0 2px 4px rgba(79, 70, 229, 0.06), 0 8px 20px rgba(79, 70, 229, 0.1);
   --radius-panel: 1rem;
@@ -26,6 +33,14 @@
 
 html {
   color-scheme: light;
+  /* Header links glide to their section instead of jumping. */
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }
 
 body {
@@ -96,6 +111,12 @@ button,
     color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
 }
 
+/* A field whose wrapper draws the focus ring (the home page demo's comment
+   box), so the field itself shouldn't draw a second one. */
+.flowly-bare-input:focus-visible {
+  outline: none;
+}
+
 /* Soft rounded corners on form controls and buttons by default. Scoped to
    @layer base so it sits below Tailwind's utilities layer — an explicit
    rounded-* class (including rounded-full toggles/pills) still wins. */
@@ -105,6 +126,98 @@ button,
   select,
   textarea {
     border-radius: 0.5rem;
+  }
+}
+
+/* Home page hero: one sequence, played once on load. A comment arrives, its
+   keyword is marked, the logo's typing dots appear in the DM thread, then the
+   reply lands. Each element's resting state is its final state, so with
+   reduced motion (animation: none below) the finished conversation shows. */
+@keyframes flowly-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+@keyframes flowly-mark {
+  from {
+    background-size: 0% 100%;
+  }
+}
+
+@keyframes flowly-blip {
+  0% {
+    opacity: 0;
+  }
+  15%,
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes flowly-dot {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-3px);
+  }
+}
+
+.flowly-rise {
+  animation: flowly-rise 520ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.flowly-mark {
+  background-image: linear-gradient(var(--color-sky), var(--color-sky));
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  animation: flowly-mark 420ms ease-out both;
+}
+
+.flowly-typing {
+  opacity: 0;
+  animation: flowly-blip 1100ms ease both;
+}
+
+.flowly-typing span {
+  animation: flowly-dot 900ms ease-in-out infinite;
+}
+
+.flowly-typing span:nth-child(2) {
+  animation-delay: 120ms;
+}
+
+.flowly-typing span:nth-child(3) {
+  animation-delay: 240ms;
+}
+
+/* Typing dots in the home page's try-it demo, looping while Flowly "replies". */
+.flowly-dot-bounce {
+  animation: flowly-dot 900ms ease-in-out infinite;
+}
+
+.flowly-dot-bounce:nth-child(2) {
+  animation-delay: 120ms;
+}
+
+.flowly-dot-bounce:nth-child(3) {
+  animation-delay: 240ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flowly-dot-bounce,
+  .flowly-rise,
+  .flowly-mark,
+  .flowly-typing,
+  .flowly-typing span {
+    animation: none;
   }
 }
 

@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import PublicSiteFooter from "@/components/public-site-footer";
 import PublicSiteHeader from "@/components/public-site-header";
 import TemplateVisual from "@/components/template-visual";
+import { bricolage } from "@/lib/fonts";
 import {
   CAMPAIGN_TEMPLATES,
   getCampaignTemplate,
@@ -42,6 +44,24 @@ export async function generateMetadata({
   };
 }
 
+// The DM as the campaign will hold it, with {placeholders} marked so it's
+// clear which parts Flowly fills in per follower.
+function DmMessage({ text }: { text: string }) {
+  return (
+    <>
+      {text.split(/(\{\w+\})/).map((part, index) =>
+        /^\{\w+\}$/.test(part) ? (
+          <span key={index} className="rounded-md bg-sky/25 px-1 font-semibold text-ink">
+            {part}
+          </span>
+        ) : (
+          part
+        )
+      )}
+    </>
+  );
+}
+
 export default async function TemplateDetailPage({ params }: TemplatePageProps) {
   const { slug } = await params;
   const template = getCampaignTemplate(slug);
@@ -54,163 +74,208 @@ export default async function TemplateDetailPage({ params }: TemplatePageProps) 
     (item) => item.slug !== template.slug
   ).slice(0, 3);
 
+  const facts = [
+    { label: "Made for", value: template.audience },
+    { label: "Goal", value: template.goal },
+    { label: "Setup time", value: `About ${template.setupMinutes} minutes` },
+  ];
+
   return (
-    <main className="min-h-screen bg-background text-foreground">
+    <main className={`${bricolage.className} min-h-screen bg-white text-ink`}>
       <PublicSiteHeader active="templates" />
 
-      <section className="border-b border-white/10 bg-zinc-950/55">
-        <div className="mx-auto grid w-full max-w-7xl gap-10 px-5 py-14 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:px-8 lg:py-20">
-          <div>
-            <Link
-              href="/templates"
-              className="text-sm font-semibold text-zinc-400 transition hover:text-white"
-            >
-              Back to templates
-            </Link>
-            <p className="mt-8 text-sm font-bold uppercase tracking-wide text-cyan-200">
-              {template.category} template
-            </p>
-            <h1 className="mt-4 text-5xl font-black leading-[1.02] text-white sm:text-6xl">
-              {template.title}
-            </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-zinc-300">
-              {template.summary}
-            </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+      <section className="px-3 pt-3 sm:px-5">
+        <div className="relative mx-auto w-full max-w-[90rem] overflow-hidden rounded-[40px] bg-signal text-white">
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-40 -top-40 h-[34rem] w-[34rem] rounded-full bg-sky/35 blur-3xl"
+          />
+          <div className="relative mx-auto grid grid-cols-1 w-full max-w-6xl items-center gap-14 px-5 py-14 sm:px-8 lg:grid-cols-[1.1fr_0.9fr] lg:py-20">
+            <div>
               <Link
-                href={`/login?template=${template.slug}`}
-                className="inline-flex items-center justify-center bg-cyan-300 px-6 py-3 text-sm font-bold text-zinc-950 transition hover:bg-cyan-200"
+                href="/templates"
+                className="inline-flex rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white hover:bg-white/20"
               >
-                Use this template
+                All templates
               </Link>
-              <a
-                href="#playbook"
-                className="inline-flex items-center justify-center border border-white/10 bg-white/[0.04] px-6 py-3 text-sm font-bold text-white transition hover:border-white/20 hover:bg-white/[0.08]"
-              >
-                Read playbook
-              </a>
-            </div>
-          </div>
-
-          <TemplateVisual template={template} />
-        </div>
-      </section>
-
-      <section className="mx-auto grid w-full max-w-7xl gap-8 px-5 py-16 sm:px-6 lg:grid-cols-[0.78fr_1.22fr] lg:px-8">
-        <aside className="space-y-4">
-          <div className="border border-white/10 bg-white/[0.035] p-5">
-            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-              Audience
-            </p>
-            <p className="mt-2 text-lg font-bold text-white">{template.audience}</p>
-          </div>
-          <div className="border border-white/10 bg-white/[0.035] p-5">
-            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-              Setup time
-            </p>
-            <p className="mt-2 text-lg font-bold text-white">
-              {template.setupMinutes} minutes
-            </p>
-          </div>
-          <div className="border border-white/10 bg-white/[0.035] p-5">
-            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-              Campaign goal
-            </p>
-            <p className="mt-2 text-lg font-bold text-white">{template.goal}</p>
-          </div>
-        </aside>
-
-        <div id="playbook" className="space-y-8">
-          <section className="border border-white/10 bg-white/[0.035] p-6">
-            <h2 className="text-2xl font-black text-white">Campaign Outcome</h2>
-            <p className="mt-3 text-base leading-8 text-zinc-300">
-              {template.outcome}
-            </p>
-          </section>
-
-          <section className="border border-white/10 bg-white/[0.035] p-6">
-            <h2 className="text-2xl font-black text-white">Setup Playbook</h2>
-            <ol className="mt-5 space-y-3">
-              {template.playbook.map((step, index) => (
-                <li key={step} className="grid gap-3 sm:grid-cols-[40px_1fr]">
-                  <span className="flex h-8 w-8 items-center justify-center bg-cyan-300 text-sm font-black text-zinc-950">
-                    {index + 1}
-                  </span>
-                  <span className="text-sm leading-7 text-zinc-300">{step}</span>
-                </li>
-              ))}
-            </ol>
-          </section>
-
-          <section className="grid gap-4 md:grid-cols-2">
-            <div className="border border-white/10 bg-white/[0.035] p-6">
-              <h2 className="text-xl font-black text-white">Best For</h2>
-              <ul className="mt-4 space-y-2">
-                {template.bestFor.map((item) => (
-                  <li key={item} className="text-sm text-zinc-300">
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="border border-white/10 bg-white/[0.035] p-6">
-              <h2 className="text-xl font-black text-white">Metrics To Watch</h2>
-              <ul className="mt-4 space-y-2">
-                {template.metrics.map((item) => (
-                  <li key={item} className="text-sm text-zinc-300">
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </section>
-
-          <section className="border border-cyan-200/20 bg-cyan-300/10 p-6">
-            <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
-              <div>
-                <h2 className="text-2xl font-black text-white">
-                  Copy this campaign into Flowly
-                </h2>
-                <p className="mt-2 text-sm leading-6 text-zinc-300">
-                  Sign in, connect Instagram, pick a post or reel, and the
-                  template copy will be ready for your campaign draft.
-                </p>
+              <h1 className="mt-8 text-balance text-5xl font-extrabold leading-[0.95] tracking-[-0.045em] sm:text-7xl">
+                {template.title}
+              </h1>
+              <p className="mt-6 max-w-lg text-xl leading-relaxed text-white/85">
+                {template.summary}
+              </p>
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <Link
+                  href={`/login?template=${template.slug}`}
+                  className="rounded-full bg-white px-8 py-4 text-center text-base font-semibold text-ink hover:bg-mist"
+                >
+                  Use this template
+                </Link>
+                <a
+                  href="#playbook"
+                  className="rounded-full border border-white/40 px-8 py-4 text-center text-base font-semibold text-white hover:border-white hover:bg-white/10"
+                >
+                  Read the playbook
+                </a>
               </div>
-              <Link
-                href={`/login?template=${template.slug}`}
-                className="inline-flex items-center justify-center bg-cyan-300 px-6 py-3 text-sm font-bold text-zinc-950 transition hover:bg-cyan-200"
-              >
-                Use this template
-              </Link>
             </div>
-          </section>
+
+            <div className="mx-auto w-full max-w-md">
+              <TemplateVisual template={template} />
+            </div>
+          </div>
         </div>
       </section>
 
-      <section className="border-t border-white/10 bg-zinc-950/60 py-14">
-        <div className="mx-auto w-full max-w-7xl px-5 sm:px-6 lg:px-8">
-          <h2 className="text-2xl font-black text-white">More templates</h2>
-          <div className="mt-6 grid gap-4 md:grid-cols-3">
-            {relatedTemplates.map((item) => (
+      {/* At a glance */}
+      <section className="mx-auto w-full max-w-6xl px-5 pt-16 sm:px-8 lg:pt-20">
+        <dl className="grid grid-cols-1 gap-x-10 border-b border-ink/10 sm:grid-cols-3">
+          {facts.map((fact) => (
+            <div key={fact.label} className="border-t border-ink/10 py-6">
+              <dt className="text-sm text-slate">{fact.label}</dt>
+              <dd className="mt-1 text-2xl font-extrabold leading-tight tracking-[-0.02em]">
+                {fact.value}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+
+      {/* What it sends */}
+      <section className="mx-auto grid grid-cols-1 w-full max-w-6xl gap-12 px-5 py-16 sm:px-8 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16 lg:py-24">
+        <div>
+          <h2 className="text-balance text-4xl font-extrabold leading-[1.02] tracking-[-0.035em] sm:text-5xl">
+            What it listens for, and what it sends
+          </h2>
+          <p className="mt-5 text-lg leading-relaxed text-slate">
+            {template.outcome}
+          </p>
+        </div>
+
+        <div className="space-y-8">
+          <div>
+            <p className="text-[15px] font-semibold">Keywords</p>
+            <p className="mt-3 flex flex-wrap gap-2">
+              {template.keywords.map((keyword) => (
+                <span
+                  key={keyword}
+                  className="rounded-full bg-ink px-4 py-2 text-[15px] font-semibold text-white"
+                >
+                  {keyword}
+                </span>
+              ))}
+            </p>
+            <p className="mt-3 text-sm text-slate">
+              Any comment containing one of these words gets the DM, in any mix of
+              upper and lower case.
+            </p>
+          </div>
+          <div>
+            <p className="text-[15px] font-semibold">The DM</p>
+            <p className="mt-3 rounded-[24px] rounded-bl-md bg-mist px-5 py-4 text-lg leading-relaxed">
+              <DmMessage text={template.dmMessage} />
+            </p>
+            {template.dmMessage.includes("{") && (
+              <p className="mt-3 text-sm text-slate">
+                Flowly fills in the marked parts for each person, like their
+                username.
+              </p>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* Playbook */}
+      <section id="playbook" className="scroll-mt-24 bg-mist">
+        <div className="mx-auto w-full max-w-6xl px-5 py-20 sm:px-8 lg:py-24">
+          <h2 className="text-balance text-4xl font-extrabold leading-[1.02] tracking-[-0.035em] sm:text-5xl">
+            The playbook
+          </h2>
+          <ol className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {template.playbook.map((step, index) => (
+              <li key={step} className="rounded-[28px] bg-white p-6">
+                <span className="text-5xl font-extrabold leading-none tracking-[-0.05em] text-signal">
+                  {index + 1}
+                </span>
+                <p className="mt-5 text-[16px] leading-relaxed">{step}</p>
+              </li>
+            ))}
+          </ol>
+
+          <div className="mt-14 grid grid-cols-1 gap-10 sm:grid-cols-2">
+            <div>
+              <h3 className="text-xl font-semibold">Works well for</h3>
+              <ul className="mt-4 flex flex-wrap gap-2">
+                {template.bestFor.map((item) => (
+                  <li key={item} className="rounded-full bg-white px-4 py-2 text-[15px]">
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-xl font-semibold">Numbers to watch</h3>
+              <ul className="mt-4 flex flex-wrap gap-2">
+                {template.metrics.map((item) => (
+                  <li key={item} className="rounded-full bg-white px-4 py-2 text-[15px]">
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Use it */}
+      <section className="px-3 pt-3 sm:px-5">
+        <div className="mx-auto w-full max-w-[90rem] rounded-[40px] bg-ink py-16 text-white lg:py-20">
+          <div className="mx-auto flex w-full max-w-6xl flex-col items-start gap-8 px-5 sm:px-8 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-2xl">
+              <h2 className="text-balance text-4xl font-extrabold leading-[1.02] tracking-[-0.035em] sm:text-5xl">
+                Copy this campaign into Flowly
+              </h2>
+              <p className="mt-4 text-lg leading-relaxed text-white/75">
+                Sign in, connect Instagram, and pick a post or reel. The keywords
+                and DM arrive already filled in, ready to edit.
+              </p>
+            </div>
+            <Link
+              href={`/login?template=${template.slug}`}
+              className="shrink-0 rounded-full bg-white px-8 py-4 text-base font-semibold text-ink hover:bg-mist"
+            >
+              Use this template
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* More templates */}
+      <section className="mx-auto w-full max-w-6xl px-5 py-20 sm:px-8 lg:py-24">
+        <h2 className="text-3xl font-extrabold tracking-[-0.03em] sm:text-4xl">
+          More templates
+        </h2>
+        <ul className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-3">
+          {relatedTemplates.map((item) => (
+            <li key={item.slug}>
               <Link
-                key={item.slug}
                 href={`/templates/${item.slug}`}
-                className="border border-white/10 bg-white/[0.035] p-5 transition hover:border-white/20 hover:bg-white/[0.055]"
+                className="flex h-full flex-col rounded-[28px] border border-ink/10 p-6 hover:border-signal hover:bg-mist/60"
               >
-                <p className="text-xs font-semibold uppercase tracking-wide text-cyan-200">
-                  {item.category}
-                </p>
-                <h3 className="mt-3 text-lg font-black text-white">
+                <p className="text-sm text-slate">{item.category}</p>
+                <h3 className="mt-2 text-xl font-extrabold leading-snug tracking-[-0.01em]">
                   {item.title}
                 </h3>
-                <p className="mt-2 text-sm leading-6 text-zinc-400">
+                <p className="mt-2 flex-1 text-[15px] leading-relaxed text-slate">
                   {item.summary}
                 </p>
               </Link>
-            ))}
-          </div>
-        </div>
+            </li>
+          ))}
+        </ul>
       </section>
+
+      <PublicSiteFooter />
     </main>
   );
 }

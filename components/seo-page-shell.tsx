@@ -1,5 +1,7 @@
 import Link from "next/link";
+import PublicSiteFooter from "@/components/public-site-footer";
 import PublicSiteHeader from "@/components/public-site-header";
+import { bricolage } from "@/lib/fonts";
 
 export interface SeoPageSection {
   title: string;
@@ -29,44 +31,46 @@ export interface SeoPageConfig {
 
 export default function SeoPageShell({ config }: { config: SeoPageConfig }) {
   return (
-    <main className="min-h-screen bg-background text-foreground">
+    <main className={`${bricolage.className} min-h-screen bg-white text-ink`}>
       <PublicSiteHeader />
 
-      <section className="border-b border-white/10 bg-zinc-950/70">
-        <div className="mx-auto grid w-full max-w-7xl gap-10 px-5 py-20 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:px-8">
-          <div>
-            <p className="text-sm font-bold uppercase text-cyan-200">
-              {config.eyebrow}
-            </p>
-            <h1 className="mt-4 text-5xl font-black leading-tight text-white sm:text-6xl">
-              {config.title}
-            </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-zinc-400">
-              {config.description}
-            </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link
-                href="/login"
-                className="inline-flex items-center justify-center bg-cyan-300 px-6 py-3 text-sm font-bold text-zinc-950 transition hover:bg-cyan-200"
-              >
-                {config.primaryCta}
-              </Link>
-              <Link
-                href="/templates"
-                className="inline-flex items-center justify-center border border-white/10 bg-white/[0.04] px-6 py-3 text-sm font-bold text-white transition hover:border-white/20 hover:bg-white/[0.08]"
-              >
-                {config.secondaryCta ?? "Browse templates"}
-              </Link>
+      <section className="px-3 pt-3 sm:px-5">
+        <div className="relative mx-auto w-full max-w-[90rem] overflow-hidden rounded-[40px] bg-signal text-white">
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-40 -top-40 h-[34rem] w-[34rem] rounded-full bg-sky/35 blur-3xl"
+          />
+          <div className="relative mx-auto grid grid-cols-1 w-full max-w-6xl items-center gap-12 px-5 py-16 sm:px-8 lg:grid-cols-[1.1fr_0.9fr] lg:py-20">
+            <div>
+              <h1 className="text-balance text-5xl font-extrabold leading-[0.95] tracking-[-0.045em] sm:text-6xl">
+                {config.title}
+              </h1>
+              <p className="mt-6 max-w-xl text-xl leading-relaxed text-white/85">
+                {config.description}
+              </p>
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <Link
+                  href="/login"
+                  className="rounded-full bg-white px-8 py-4 text-center text-base font-semibold text-ink hover:bg-mist"
+                >
+                  {config.primaryCta}
+                </Link>
+                <Link
+                  href="/templates"
+                  className="rounded-full border border-white/40 px-8 py-4 text-center text-base font-semibold text-white hover:border-white hover:bg-white/10"
+                >
+                  {config.secondaryCta ?? "Browse templates"}
+                </Link>
+              </div>
             </div>
-          </div>
 
-          <div className="border border-white/10 bg-white/[0.035] p-6">
-            <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">
-              Campaign OS checklist
-            </p>
-            <ul className="mt-5 space-y-4">
+            <ul className="space-y-3">
               {config.bullets.map((bullet) => (
-                <li key={bullet} className="flex gap-3 text-sm leading-6 text-zinc-300">
+                <li
+                  key={bullet}
+                  className="flex gap-3 rounded-[22px] bg-white px-5 py-4 text-[16px] leading-snug text-ink"
+                >
+                  <span aria-hidden="true" className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-signal" />
                   {bullet}
                 </li>
               ))}
@@ -75,38 +79,40 @@ export default function SeoPageShell({ config }: { config: SeoPageConfig }) {
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-7xl px-5 py-16 sm:px-6 lg:px-8">
-        <div className="grid gap-4 md:grid-cols-3">
+      <section className="mx-auto w-full max-w-6xl px-5 py-20 sm:px-8 lg:py-24">
+        <div className="grid grid-cols-1 gap-x-10 gap-y-2 md:grid-cols-3">
           {config.sections.map((section) => (
-            <article key={section.title} className="border border-white/10 bg-white/[0.035] p-6">
-              <h2 className="text-2xl font-black text-white">{section.title}</h2>
-              <p className="mt-4 text-sm leading-7 text-zinc-400">{section.body}</p>
+            <article key={section.title} className="border-t border-ink/10 py-6">
+              <h2 className="text-2xl font-extrabold leading-tight tracking-[-0.02em]">{section.title}</h2>
+              <p className="mt-3 text-[16px] leading-relaxed text-slate">{section.body}</p>
             </article>
           ))}
         </div>
       </section>
 
-      <section className="border-y border-white/10 bg-white/[0.025] py-16">
-        <div className="mx-auto w-full max-w-7xl px-5 sm:px-6 lg:px-8">
-          <h2 className="text-4xl font-black text-white">{config.comparisonTitle}</h2>
-          <div className="mt-8 overflow-hidden border border-white/10">
-            <div className="grid grid-cols-[0.8fr_1fr_1fr] border-b border-white/10 bg-zinc-950 text-xs font-bold uppercase tracking-wide text-zinc-500">
-              <div className="p-4">Need</div>
-              <div className="p-4 text-cyan-100">Flowly</div>
-              <div className="p-4">Generic automation</div>
+      <section className="bg-mist">
+        <div className="mx-auto w-full max-w-6xl px-5 py-20 sm:px-8 lg:py-24">
+          <h2 className="max-w-3xl text-balance text-4xl font-extrabold leading-[1.02] tracking-[-0.035em] sm:text-5xl">
+            {config.comparisonTitle}
+          </h2>
+          <div className="mt-10 overflow-hidden rounded-[28px] bg-white">
+            <div className="hidden grid-cols-[0.8fr_1fr_1fr] border-b border-ink/10 text-sm font-semibold md:grid">
+              <div className="p-5 text-slate">What you need</div>
+              <div className="p-5 text-signal">Flowly</div>
+              <div className="p-5 text-slate">Generic automation</div>
             </div>
             {config.comparisons.map((item) => (
               <div
                 key={item.label}
-                className="grid grid-cols-1 border-b border-white/10 last:border-0 md:grid-cols-[0.8fr_1fr_1fr]"
+                className="grid grid-cols-1 border-b border-ink/10 last:border-0 md:grid-cols-[0.8fr_1fr_1fr]"
               >
-                <div className="bg-zinc-950/50 p-4 text-sm font-semibold text-white">
-                  {item.label}
-                </div>
-                <div className="p-4 text-sm leading-6 text-zinc-300">
+                <div className="px-5 pt-5 text-[16px] font-semibold md:pb-5">{item.label}</div>
+                <div className="px-5 pt-2 text-[15px] leading-relaxed text-ink md:py-5">
+                  <span className="font-semibold text-signal md:hidden">Flowly: </span>
                   {item.ours}
                 </div>
-                <div className="p-4 text-sm leading-6 text-zinc-500">
+                <div className="px-5 pb-5 pt-2 text-[15px] leading-relaxed text-slate md:py-5">
+                  <span className="font-semibold md:hidden">Generic automation: </span>
                   {item.other}
                 </div>
               </div>
@@ -115,69 +121,77 @@ export default function SeoPageShell({ config }: { config: SeoPageConfig }) {
         </div>
       </section>
 
-      <section className="mx-auto grid w-full max-w-7xl gap-8 px-5 py-16 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:px-8">
+      <section className="mx-auto grid grid-cols-1 w-full max-w-6xl gap-10 px-5 py-20 sm:px-8 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16 lg:py-24">
         <div>
-          <p className="text-sm font-bold uppercase text-emerald-200">
+          <h2 className="text-balance text-4xl font-extrabold leading-[1.02] tracking-[-0.035em] sm:text-5xl">
             Start from a template
-          </p>
-          <h2 className="mt-3 text-4xl font-black text-white">
-            Launch a campaign faster than building a chatbot flow
           </h2>
-          <p className="mt-5 text-sm leading-7 text-zinc-400">
-            Use a campaign template, connect the right Instagram account, pick
-            the post, and ship a measurable comment-to-DM loop.
+          <p className="mt-5 text-lg leading-relaxed text-slate">
+            Pick a template, connect the right Instagram account, choose the
+            post, and the campaign is ready. No chatbot flow to build.
           </p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {config.templateLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="border border-white/10 bg-white/[0.035] p-5 text-sm font-semibold text-white transition hover:border-cyan-200/30 hover:bg-cyan-300/10"
-            >
-              {link.label}
-            </Link>
+            <li key={link.href}>
+              <Link
+                href={link.href}
+                className="flex h-full items-center rounded-[22px] border border-ink/10 px-5 py-4 text-[16px] font-semibold hover:border-signal hover:bg-mist/60"
+              >
+                {link.label}
+              </Link>
+            </li>
           ))}
-        </div>
+        </ul>
       </section>
 
-      <section className="border-t border-white/10 bg-zinc-950/70 py-16">
-        <div className="mx-auto grid w-full max-w-7xl gap-8 px-5 sm:px-6 lg:grid-cols-[0.8fr_1.2fr] lg:px-8">
-          <div>
-            <p className="text-sm font-bold uppercase text-cyan-200">FAQ</p>
-            <h2 className="mt-3 text-4xl font-black text-white">
-              Search questions, answered clearly
-            </h2>
-          </div>
-          <div className="grid gap-3">
+      <section className="border-t border-ink/10">
+        <div className="mx-auto w-full max-w-3xl px-5 py-20 sm:px-8 lg:py-24">
+          <h2 className="text-balance text-4xl font-extrabold leading-[1.02] tracking-[-0.035em] sm:text-5xl">
+            Questions people ask first
+          </h2>
+          <div className="mt-10 border-b border-ink/10">
             {config.faqs.map((faq) => (
-              <article key={faq.title} className="border border-white/10 bg-white/[0.035] p-5">
-                <h3 className="text-lg font-bold text-white">{faq.title}</h3>
-                <p className="mt-2 text-sm leading-6 text-zinc-400">{faq.body}</p>
-              </article>
+              <details key={faq.title} className="group border-t border-ink/10">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-5 text-lg font-semibold [&::-webkit-details-marker]:hidden">
+                  {faq.title}
+                  <span
+                    aria-hidden="true"
+                    className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-mist text-xl leading-none text-signal transition-transform duration-200 group-open:rotate-45"
+                  >
+                    +
+                  </span>
+                </summary>
+                <p className="max-w-2xl pb-6 text-[16px] leading-relaxed text-slate">{faq.body}</p>
+              </details>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-7xl px-5 py-16 sm:px-6 lg:px-8">
-        <div className="border border-cyan-200/20 bg-cyan-300/10 p-8 text-center">
-          <h2 className="text-4xl font-black text-white">
-            Turn the next high-intent comment into a private reply
-          </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-zinc-300">
-            Flowly is built for Instagram professional accounts, official
-            Meta private replies, and campaign reporting teams can show clients.
-          </p>
-          <Link
-            href="/login"
-            className="mt-8 inline-flex items-center justify-center bg-cyan-300 px-6 py-3 text-sm font-bold text-zinc-950 transition hover:bg-cyan-200"
-          >
-            Start free
-          </Link>
+      <section className="px-3 pb-3 sm:px-5 sm:pb-5">
+        <div className="mx-auto w-full max-w-[90rem] rounded-[40px] bg-ink py-16 text-white lg:py-20">
+          <div className="mx-auto flex w-full max-w-6xl flex-col items-start gap-8 px-5 sm:px-8 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-2xl">
+              <h2 className="text-balance text-4xl font-extrabold leading-[1.02] tracking-[-0.035em] sm:text-5xl">
+                Turn the next comment that asks into a DM that answers
+              </h2>
+              <p className="mt-4 text-lg leading-relaxed text-white/75">
+                For Instagram Business and Creator accounts, through
+                Instagram&rsquo;s official API, with reports you can share.
+              </p>
+            </div>
+            <Link
+              href="/login"
+              className="shrink-0 rounded-full bg-white px-8 py-4 text-base font-semibold text-ink hover:bg-mist"
+            >
+              Get started
+            </Link>
+          </div>
         </div>
       </section>
+
+      <PublicSiteFooter />
     </main>
   );
 }
-
